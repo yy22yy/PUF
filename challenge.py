@@ -1,5 +1,7 @@
 """生成用于 PUF 实验的 Challenge（挑战）数据。"""
 
+import argparse
+
 # NumPy 用于高效处理数组，并提供向量、矩阵和批量数值计算功能。
 # 本项目后续会进行 PUF 的向量化计算，因此使用 NumPy 比逐个处理 Python
 # 列表更合适。Python 标准库中的 random 模块也可以生成随机数，但更适合
@@ -39,5 +41,43 @@ def generate_challenges(
 # 只有直接运行本文件时才执行下面的示例代码。
 # 当其他文件 import 本模块时，不会自动生成数据，便于复用函数。
 if __name__ == "__main__":
-    challenges = generate_challenges()
+    parser = argparse.ArgumentParser(
+        description="生成用于 PUF 实验的 Challenge 数组",
+        epilog=(
+            "示例：\n"
+            "  python challenge.py --num 100 --c_bit 64 --seed 42\n"
+            "  表示生成 100 组、每组 64 位的 Challenge。"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--num",
+        type=int,
+        default=100,
+        metavar="N",
+        help="生成的 Challenge 组数；默认值：100",
+    )
+    parser.add_argument(
+        "--c_bit",
+        type=int,
+        default=64,
+        metavar="BITS",
+        help="每组 Challenge 的二进制位数；默认值：64",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        metavar="SEED",
+        help="随机种子；相同种子会生成相同结果；默认值：42",
+    )
+    args = parser.parse_args()
+
+    challenges = generate_challenges(
+        num_challenges=args.num,
+        challenge_length=args.c_bit,
+        seed=args.seed,
+    )
+    print("Challenge 数据：")
     print(challenges)
+    print("Challenge 数组形状：", challenges.shape)
