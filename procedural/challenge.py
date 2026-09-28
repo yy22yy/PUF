@@ -1,36 +1,15 @@
 """使用面向过程方式生成 PUF Challenge。"""
 
+# NumPy 用于向量、矩阵和批量数值计算。
 import numpy as np
 
+# 42 是随机种子：固定种子可以让每次运行生成相同的数据，便于复现和调试。
+rng = np.random.default_rng(42)
 
-def generate_challenges(
-    num_challenges: int = 100,
-    challenge_length: int = 64,
-    seed: int | None = 42,
-) -> np.ndarray:
-    """生成由 0 和 1 组成的 Challenge 矩阵。
-
-    参数：
-        num_challenges: 要生成的 Challenge 数量，即矩阵的行数。
-        challenge_length: 每组 Challenge 的位数，即矩阵的列数。
-        seed: 随机种子。固定为同一个整数时，结果可复现；设为 None
-            时不固定结果。
-
-    返回：
-        形状为 ``(num_challenges, challenge_length)`` 的 NumPy 数组。
-    """
-    # 使用局部随机数生成器，避免修改 NumPy 的全局随机状态。
-    rng = np.random.default_rng(seed)
-
-    # 下界 0 包含在结果中，上界 2 不包含在结果中，所以元素只有 0 和 1。
-    return rng.integers(
-        0,
-        2,
-        size=(num_challenges, challenge_length),
-    )
-
-
-if __name__ == "__main__":
-    # 直接运行本文件时生成默认规模的 Challenge。
-    challenges = generate_challenges()
-    print(challenges)
+# 生成 100 组、每组 64 位的二进制 Challenge。
+# 0 是包含在结果中的下界，2 是不包含在结果中的上界，因此元素只有 0 和 1。
+challenges = rng.integers(
+    0,
+    2,
+    size=(100, 64),
+)
