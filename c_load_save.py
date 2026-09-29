@@ -15,6 +15,23 @@ import numpy as np
 from challenge import generate_challenges
 
 
+def validate_challenges(challenges: np.ndarray) -> np.ndarray:
+    """检查并返回合法的二维 Challenge 数组。"""
+    array = np.asarray(challenges)
+    if array.ndim != 2:
+        raise ValueError("challenges 必须是二维数组")
+    if not np.all((array == 0) | (array == 1)):
+        raise ValueError("challenges 只能包含 0 和 1")
+    return array
+
+
+def prepare_output_path(path: str | Path) -> Path:
+    """转换输出路径，并创建所需的父目录。"""
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    return output_path
+
+
 def save_challenges(challenges: np.ndarray, path: str | Path) -> None:
     """保存 Challenge 数组。
 
@@ -22,31 +39,23 @@ def save_challenges(challenges: np.ndarray, path: str | Path) -> None:
         challenges: 只包含 0 和 1 的二维 Challenge 数组。
         path: 输出文件路径，例如 ``data/challenges.npy``。
     """
-    array = np.asarray(challenges)
-    if array.ndim != 2 or not np.all((array == 0) | (array == 1)):
-        raise ValueError("challenges 必须是只包含 0 和 1 的二维数组")
+    array = validate_challenges(challenges)
+    output_path = prepare_output_path(path)
 
-    output_path = Path(path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
     np.save(output_path, array.astype(np.uint8))
 
 
 def save_challenges_csv(challenges: np.ndarray, path: str | Path) -> None:
     """将 Challenge 数组保存为方便人工查看的 CSV 文件。"""
-    array = np.asarray(challenges)
-    if array.ndim != 2 or not np.all((array == 0) | (array == 1)):
-        raise ValueError("challenges 必须是只包含 0 和 1 的二维数组")
+    array = validate_challenges(challenges)
+    output_path = prepare_output_path(path)
 
-    output_path = Path(path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
     np.savetxt(output_path, array.astype(np.uint8), delimiter=",", fmt="%d")
 
 
 def load_challenges(path: str | Path) -> np.ndarray:
     """从 ``.npy`` 文件读取 Challenge 数组。"""
-    array = np.load(Path(path), allow_pickle=False)
-    if array.ndim != 2 or not np.all((array == 0) | (array == 1)):
-        raise ValueError("文件中的 Challenge 必须是只包含 0 和 1 的二维数组")
+    array = validate_challenges(np.load(Path(path), allow_pickle=False))
     return array.astype(np.uint8)
 
 
