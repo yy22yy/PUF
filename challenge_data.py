@@ -68,6 +68,7 @@ def generate_and_save_challenges(
     """生成 Challenge、保存到文件，并返回生成的数组。"""
     challenges = generate_challenges(num_challenges, challenge_length, seed)
     save_challenges(challenges, path)
+    save_challenges_csv(challenges, Path(path).with_suffix(".csv"))
     return challenges
 
 
@@ -79,7 +80,7 @@ if __name__ == "__main__":
         ),
         epilog=(
             "示例：\n"
-            "  python c_load_save.py --num 3 --c_bit 4 --seed 42 --overwrite\n"
+            "  python challenge_data.py --num 3 --c_bit 4 --seed 42 --overwrite\n"
             "  表示生成 3 组、每组 4 位的 Challenge，并覆盖已有文件。"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
