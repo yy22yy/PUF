@@ -1,5 +1,30 @@
 # PUF 项目
 
+默认数据与实验目录集中配置在根目录 `puf.toml`。Challenge/CRP 生成脚本、LR/MLP/DNN 和 ECP 训练入口以配置文件所在目录作为项目根目录；可通过 `PUF_CONFIG=/path/to/puf.toml` 指定配置文件，各 CLI 入口也支持 `--config`。配置中的相对路径按 `puf.toml` 所在目录解析，而非依赖启动命令时所在目录。显式传入的相对文件路径也按配置文件位置解析。
+
+所有 NPZ 文件必须配套 CSV：`name.npz` 对应 `name.csv`（数组清单）以及每个成员的 `name__成员名.csv`（展开后的数组数据）。NPZ 保留精确类型和形状，CSV 便于查看和交换。新增 NPZ 写入点时也必须遵循此规则；ECP 实验使用 `save_npz_with_csv` / `save_parameters`。
+
+## 目录定位
+
+根目录的 `puf/`、`attacks/` 及数据脚本是本项目当前的自主实现。`TENAX_source-tf2/` 已标记为[参考代码目录](TENAX_source-tf2/REFERENCE.md)，供后续设计自己的 ECP-TRN 时研究；其中已有 ECP 层定义，但现有攻击入口主要运行 ETT 或 LR。
+
+## 统一实验流程（后续规范）
+
+后续 PUF 仿真、CRP 生成和攻击实验统一按以下流程组织。各步骤应由同一实验配置串联，并写入同一个独立运行目录；不得只保存最终准确率而丢失数据来源、参数或中间状态。
+
+1. **读取实验配置**：确定数据路径、PUF 类型、攻击方法、训练/测试比例、随机种子和超参数。
+2. **生成或加载 Challenge**：保存生成参数、随机种子和 Challenge 文件摘要；真实设备数据应记录采集条件。
+3. **生成或加载 Response**：仿真时记录 PUF 类型、仿真参数、噪声和权重种子；真实硬件实验记录设备及采集条件，不推断未知参数。
+4. **构建 CRP 数据**：按行配对 Challenge 与 Response，保存 CRP 并记录文件摘要。
+5. **划分数据集**：记录训练集和测试集的原始行号、划分比例及随机种子，确保可以复现同一划分。
+6. **训练攻击模型**：通过统一接口调用 LR、MLP、DNN、ECP 或后续新增的攻击实现。
+7. **保存训练过程**：记录逐轮训练指标、检查点和运行状态；若要求中断后续训，同时保存优化器状态及当前训练步数。
+8. **评估并保存结果**：保存测试集预测、评估指标和基线结果，并确保测试数据不参与训练或模型选择。
+9. **生成实验清单**：记录配置、代码版本、运行环境、输入摘要、开始/结束时间、完成状态及所有产物的摘要。
+10. **重载验证**：从实验记录重载模型与数据，复算指标和预测，并验证结果与已保存记录一致。
+
+一次实验应能据此回答：用了什么 PUF 和数据、如何划分、运行了哪个攻击及参数、训练是否完成、结果是什么，以及是否能够重载复算。当前 ECP 原型已经实现其中一部分记录与重载验证；将 LR、MLP、DNN 和 PUF/CRP 生成流程接入统一运行记录，是后续完善方向。
+
 ## Challenge 生成
 
 `challenge.py` 主要用于生成 Challenge 数组。它只负责生成由 `0` 和 `1` 组成的二维数组，不负责计算 PUF 的 Response。
@@ -84,7 +109,7 @@ python merge_crp.py --challenge-path data/challenges.npy --response-path data/re
 python -m attacks.apuf_lr --crp-path data/crps.npy --test-size 0.25 --seed 42
 ```
 
-默认将 25% 的 CRP 留作测试集，并按 Response 类别分层抽样。程序会报告训练准确率、测试准确率和测试集多数类基线。测试集准确率用于衡量对未见样本的预测效果；多数类基线可帮助判断模型是否优于简单地总猜同一类。当前 `data/crps.npy` 只有 10 条样本，适合验证程序流程，不足以得出可靠的攻击效果结论；实验时应使用更多 CRP。
+默认将 25% 的 CRP 留作测试集，并按 Response 类别分层抽样。程序会报告训练准确率、测试准确率和测试集多数类基线。测试集准确率用于衡量对未见样本的预测效果；多数类基线可帮助判断模型是否优于简单地总猜同一类。当前 `data/crps.npy` 包含 10,000 条 32 位 Challenge 的 CRP；评估攻击效果时仍应报告数据来源、划分种子及测试条件。
 
 ## Challenge 特征转换
 
@@ -114,3 +139,9 @@ python -m attacks.apuf_dnn --crp-path data/crps.npy --epochs 300 --seed 42
 ```
 
 `attacks/apuf_mlp.py` 和 `attacks/apuf_dnn.py` 分别运行浅层 MLP 和较深的 DNN；两者共用 `attacks/neural_net.py` 的训练实现。`attacks/common.py` 提供 CRP 检查、相同的分层数据划分和准确率计算。三个入口都会留出测试集，并报告训练准确率、测试准确率和多数类基线。也可以调整 `--test-size`、`--batch-size` 和 `--learning-rate`。比较攻击效果时，使用相同数据集和划分参数即可复用同一训练/测试集。
+
+## 单 APUF ECP 原型
+
+`attacks/ecp/` 包含 PyTorch 和 TensorFlow 两种 ECP 实现及统一的实验记录流程。此原型针对单个 APUF，使用现有 `data/crps.npy`，并与同一训练/测试划分下的 Logistic Regression 对照。由于单分支 ECP 可化简为线性函数，该实验主要验证实现和跨框架一致性，不代表 ECP 在多分支 PUF 上的攻击能力。环境、运行、重载和对照命令见 [`attacks/ecp/README.md`](attacks/ecp/README.md)。
+
+两种实现已在默认参数下完成 200 轮训练，测试准确率均为 99.52%，LR 基线为 99.04%；跨框架初始输出、损失和梯度检查通过。实验记录保存在本地 `runs/ecp-backend-validation-*` 目录。

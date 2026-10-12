@@ -1,18 +1,39 @@
 """Shared CRP loading, validation, splitting, and evaluation helpers."""
 
 from pathlib import Path
+import hashlib
+import io
 
 import numpy as np
 
 
-def load_crps(path: str | Path) -> np.ndarray:
-    """Load a CRP matrix whose last column contains the 0/1 Response."""
-    crps = np.asarray(np.load(Path(path), allow_pickle=False))
+def _validate_crps(value: np.ndarray) -> np.ndarray:
+    crps = np.asarray(value)
     if crps.ndim != 2 or crps.shape[1] < 2:
         raise ValueError("CRP 必须是二维数组，且每行至少包含 1 位 Challenge 和 1 位 Response")
     if not np.all((crps == 0) | (crps == 1)):
         raise ValueError("CRP 只能包含 0 和 1")
     return crps
+
+
+def load_crps(path: str | Path) -> np.ndarray:
+    """Load a CRP matrix whose last column contains the 0/1 Response."""
+    value = np.load(Path(path), allow_pickle=False)
+    if not isinstance(value, np.ndarray):
+        value.close()
+        raise ValueError("CRP 文件必须是 NPY 矩阵")
+    return _validate_crps(value)
+
+
+def load_crps_snapshot(path: str | Path) -> tuple[np.ndarray, str]:
+    """Read and hash the same immutable byte snapshot used to parse a CRP."""
+    payload = Path(path).read_bytes()
+    digest = hashlib.sha256(payload).hexdigest()
+    value = np.load(io.BytesIO(payload), allow_pickle=False)
+    if not isinstance(value, np.ndarray):
+        value.close()
+        raise ValueError("CRP 文件必须是 NPY 矩阵")
+    return _validate_crps(value), digest
 
 
 def split_by_response(

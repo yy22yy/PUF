@@ -6,6 +6,7 @@ import numpy as np
 
 from attacks.common import accuracy, load_crps, majority_baseline, split_by_response
 from puf.features import ChallengeFeatureTransformer
+from project_config import load_project_config, resolve_project_path
 
 
 def sigmoid(values: np.ndarray) -> np.ndarray:
@@ -44,7 +45,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--crp-path",
-        default="data/crps.npy",
+        default=None,
         help="输入的 CRP .npy 文件，每行最后一列为 Response",
     )
     parser.add_argument(
@@ -59,11 +60,15 @@ def main() -> None:
         default=42,
         help="训练/测试划分随机种子",
     )
+    parser.add_argument("--config", help="项目 TOML 配置；也可通过 PUF_CONFIG 指定")
     args = parser.parse_args()
+
+    project_root, paths = load_project_config(args.config)
+    crp_path = resolve_project_path(args.crp_path, project_root) if args.crp_path else paths["default_crp"]
 
     # CRP 每行格式为 [Challenge 的各位..., Response]。
     try:
-        crps = load_crps(args.crp_path)
+        crps = load_crps(crp_path)
     except (OSError, ValueError) as error:
         parser.error(str(error))
     if not 0.0 < args.test_size < 1.0:

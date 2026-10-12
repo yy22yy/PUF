@@ -5,6 +5,7 @@ import argparse
 import numpy as np
 
 from attacks.common import accuracy, load_crps, majority_baseline, split_by_response
+from project_config import load_project_config, resolve_project_path
 
 
 def relu(values: np.ndarray) -> np.ndarray:
@@ -132,7 +133,8 @@ def run_attack(
     parser = argparse.ArgumentParser(
         description=f"使用 {name} 对单个 APUF 进行建模攻击"
     )
-    parser.add_argument("--crp-path", default="data/crps.npy", help="输入 CRP .npy 文件")
+    parser.add_argument("--crp-path", help="输入 CRP .npy 文件；默认读取项目配置")
+    parser.add_argument("--config", help="项目 TOML 配置；也可通过 PUF_CONFIG 指定")
     parser.add_argument("--test-size", type=float, default=0.25, help="测试集比例")
     parser.add_argument("--epochs", type=int, default=300, help="训练轮数")
     parser.add_argument("--batch-size", type=int, default=64, help="每次更新使用的样本数")
@@ -140,8 +142,11 @@ def run_attack(
     parser.add_argument("--seed", type=int, default=42, help="划分及训练随机种子")
     args = parser.parse_args(argv)
 
+    project_root, paths = load_project_config(args.config)
+    crp_path = resolve_project_path(args.crp_path, project_root) if args.crp_path else paths["default_crp"]
+
     try:
-        crps = load_crps(args.crp_path)
+        crps = load_crps(crp_path)
     except (OSError, ValueError) as error:
         parser.error(str(error))
     if not 0.0 < args.test_size < 1.0:

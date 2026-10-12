@@ -11,6 +11,7 @@ import numpy as np
 
 from challenge_data import load_challenges
 from puf import APUF
+from project_config import load_project_config, resolve_project_path
 
 
 def array_sha256(array: np.ndarray) -> str:
@@ -29,12 +30,12 @@ def main() -> None:
     )
     parser.add_argument(
         "--challenge-path",
-        default="data/challenges.npy",
+        default=None,
         help="输入的 Challenge .npy 文件",
     )
     parser.add_argument(
         "--response-path",
-        default="data/responses.npy",
+        default=None,
         help="输出的 Response .npy 文件",
     )
     parser.add_argument(
@@ -49,17 +50,21 @@ def main() -> None:
         default=None,
         help="生成 Challenge 时使用的种子（可选，用于实验记录）",
     )
+    parser.add_argument("--config", help="项目 TOML 配置；也可通过 PUF_CONFIG 指定")
     args = parser.parse_args()
 
+    project_root, paths = load_project_config(args.config)
+    challenge_path = resolve_project_path(args.challenge_path, project_root) if args.challenge_path else paths["default_challenges"]
+    response_path = resolve_project_path(args.response_path, project_root) if args.response_path else paths["default_responses"]
+
     # 先读取之前生成并保存的 Challenge。
-    challenges = load_challenges(args.challenge_path)
+    challenges = load_challenges(challenge_path)
 
     # Challenge 的列数就是每组 Challenge 的位数 n。
     puf = APUF(n=challenges.shape[1], seed=args.seed)
     responses = puf.response(challenges)
 
     # 确保输出目录存在，再保存 NPY 和同名 CSV。
-    response_path = Path(args.response_path)
     response_path.parent.mkdir(parents=True, exist_ok=True)
     np.save(response_path, responses)
     response_csv_path = response_path.with_suffix(".csv")
@@ -72,7 +77,6 @@ def main() -> None:
     np.savetxt(weights_csv_path, puf.weights, delimiter=",", fmt="%.17g")
 
     metadata_path = response_path.with_name(f"{response_path.stem}_metadata.json")
-    project_root = Path(__file__).resolve().parent
     source_files = (
         project_root / "generate_crp.py",
         project_root / "puf" / "apuf.py",
@@ -91,7 +95,7 @@ def main() -> None:
             "weights_sha256": array_sha256(puf.weights),
         },
         "challenge": {
-            "file": str(Path(args.challenge_path)),
+            "file": str(challenge_path),
             "shape": list(challenges.shape),
             "generation_seed": args.challenge_seed,
             "values_sha256": array_sha256(challenges),

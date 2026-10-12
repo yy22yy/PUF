@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 
 from challenge_data import load_challenges
+from project_config import load_project_config, resolve_project_path
 
 
 def merge_crp(
@@ -46,20 +47,26 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="将 Challenge 和 Response 合并成一个 CRP NPY 文件"
     )
-    parser.add_argument("--challenge-path", required=True, help="输入 Challenge .npy 文件")
-    parser.add_argument("--response-path", required=True, help="输入 Response .npy 文件")
-    parser.add_argument("--output-path", default="data/crps.npy", help="输出 CRP .npy 文件")
+    parser.add_argument("--challenge-path", help="输入 Challenge .npy 文件；默认读取项目配置")
+    parser.add_argument("--response-path", help="输入 Response .npy 文件；默认读取项目配置")
+    parser.add_argument("--output-path", help="输出 CRP .npy 文件；默认读取项目配置")
+    parser.add_argument("--config", help="项目 TOML 配置；也可通过 PUF_CONFIG 指定")
     args = parser.parse_args()
 
+    project_root, paths = load_project_config(args.config)
+    challenge_path = resolve_project_path(args.challenge_path, project_root) if args.challenge_path else paths["default_challenges"]
+    response_path = resolve_project_path(args.response_path, project_root) if args.response_path else paths["default_responses"]
+    output_path = resolve_project_path(args.output_path, project_root) if args.output_path else paths["default_crp"]
+
     crps = merge_crp(
-        args.challenge_path,
-        args.response_path,
-        args.output_path,
+        challenge_path,
+        response_path,
+        output_path,
     )
     print(f"CRP 数组形状：{crps.shape}")
     print(f"每行格式：{crps.shape[1] - 1} 位 Challenge + 1 位 Response")
-    print(f"CRP NPY 已保存到：{args.output_path}")
-    print(f"CRP CSV 已保存到：{Path(args.output_path).with_suffix('.csv')}")
+    print(f"CRP NPY 已保存到：{output_path}")
+    print(f"CRP CSV 已保存到：{output_path.with_suffix('.csv')}")
 
 
 if __name__ == "__main__":

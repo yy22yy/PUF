@@ -1,0 +1,6 @@
+[paths]
+data_dir = "data"
+runs_dir = "runs"
+default_crp = "data/crps.npy"
+default_challenges = "data/challenges.npy"
+default_responses = "data/responses.npy"

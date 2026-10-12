@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 
 from challenge import generate_challenges
+from project_config import load_project_config, resolve_project_path
 
 
 def validate_challenges(challenges: np.ndarray) -> np.ndarray:
@@ -108,7 +109,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--path",
-        default="data/challenges.npy",
+        default=None,
         help=(
             "NPY 文件保存路径；程序会在相同目录自动生成同名 CSV；"
             "默认值：data/challenges.npy"
@@ -119,6 +120,7 @@ if __name__ == "__main__":
         action="store_true",
         help="允许覆盖已经存在的 .npy 文件",
     )
+    parser.add_argument("--config", help="项目 TOML 配置；也可通过 PUF_CONFIG 指定")
     args = parser.parse_args()
 
     if args.num < 1:
@@ -126,7 +128,8 @@ if __name__ == "__main__":
     if args.c_bit < 1:
         parser.error("--c_bit 必须是正整数")
 
-    file_path = Path(args.path)
+    project_root, paths = load_project_config(args.config)
+    file_path = resolve_project_path(args.path, project_root) if args.path else paths["default_challenges"]
     csv_path = file_path.with_suffix(".csv")
     existing_paths = [path for path in (file_path, csv_path) if path.exists()]
     if existing_paths and not args.overwrite:

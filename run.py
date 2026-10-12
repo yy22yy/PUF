@@ -1,12 +1,13 @@
-from pathlib import Path
 
 from challenge_data import (
     generate_and_save_challenges,
     load_challenges,
 )
+from project_config import load_project_config
 
 # 生成并保存 Challenge。这里的 seed 固定后，每次结果都可复现。
-npy_path = Path("data/challenges.npy")
+_, project_paths = load_project_config()
+npy_path = project_paths["default_challenges"]
 challenges = generate_and_save_challenges(
     npy_path,
     num_challenges=100,
@@ -16,5 +17,4 @@ challenges = generate_and_save_challenges(
 # 后续可以直接读取之前保存的 NPY 文件。
 challenges = load_challenges(npy_path)
 print("Challenge 数组形状：", challenges.shape)
-
 
