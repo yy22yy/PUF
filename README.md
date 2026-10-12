@@ -1,12 +1,10 @@
 # PUF 项目
 
+项目各模块的文件清单和可执行命令见[模块运行说明](docs/模块总览.md)。
+
 默认数据与实验目录集中配置在根目录 `puf.toml`。Challenge/CRP 生成脚本、LR/MLP/DNN 和 ECP 训练入口以配置文件所在目录作为项目根目录；可通过 `PUF_CONFIG=/path/to/puf.toml` 指定配置文件，各 CLI 入口也支持 `--config`。配置中的相对路径按 `puf.toml` 所在目录解析，而非依赖启动命令时所在目录。显式传入的相对文件路径也按配置文件位置解析。
 
 所有 NPZ 文件必须配套 CSV：`name.npz` 对应 `name.csv`（数组清单）以及每个成员的 `name__成员名.csv`（展开后的数组数据）。NPZ 保留精确类型和形状，CSV 便于查看和交换。新增 NPZ 写入点时也必须遵循此规则；ECP 实验使用 `save_npz_with_csv` / `save_parameters`。
-
-## 目录定位
-
-根目录的 `puf/`、`attacks/` 及数据脚本是本项目当前的自主实现。`TENAX_source-tf2/` 已标记为[参考代码目录](TENAX_source-tf2/REFERENCE.md)，供后续设计自己的 ECP-TRN 时研究；其中已有 ECP 层定义，但现有攻击入口主要运行 ETT 或 LR。
 
 ## 统一实验流程（后续规范）
 
