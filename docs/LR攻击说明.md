@@ -1,40 +1,152 @@
 # LR 攻击：可执行说明
 
-## 方法与代码
+> **预处理、模型与完整预测流程**
+>
+> - **输入预处理**：按固定规则转换 Challenge，不需要训练。LR 使用的 APUF 阶段特征转换属于预处理。
+> - **预测模型**：使用训练得到的分类权重和偏置计算预测结果，参数通过损失函数指导更新。
+> - **完整预测流程**：由“输入预处理 + 已训练模型”共同组成。预测新的 Challenge 时，必须采用与训练时相同的特征转换。
 
-`attacks/apuf_lr.py` 用 Logistic Regression 对单个 APUF 建模。它先通过 `puf/features.py` 将每位 Challenge 转换为 APUF 阶段特征，再用批量梯度下降拟合二分类权重。损失包含 L2 正则项，偏置特征不受正则化。
+训练实验包含三个不同对象：**预测模型**负责从 Challenge 预测 Response；**目标函数（损失函数）**衡量预测误差并指导参数更新；**准确率**评价训练后模型的预测效果。攻击训练得到的是模型参数，而不是一个准确率数值。
 
-相关文件：`attacks/apuf_lr.py`、`attacks/common.py`、`puf/features.py`、`project_config.py`。
+## 一、实验数据与划分
 
-## 环境与输入
+本实验面向单 APUF。输入是按行配对的 Challenge 和 0/1 Response，真实 PUF 权重 `puf_weights.npy` 和权重生成种子不参与训练。
 
-在项目根目录安装主项目依赖：
+入口 [attacks/apuf_lr.py](../attacks/apuf_lr.py) 支持直接读取两个 NPY 文件，也支持读取合并后的 CRP：
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -e .
+```python
+# 分别读取两个 NPY 文件，并检查形状、0/1 取值及样本数量是否一致
+challenges, responses = load_challenge_responses(challenge_path, response_path)
 ```
 
-输入为二维 CRP NPY 文件；每行的最后一列是 Response，其余列是二进制 Challenge。若没有 CRP，先按[数据流程说明](Challenge与CRP数据流程.md)生成 `data/crps.npy`。
+64 位 Challenge 的形状为 `(m,64)`，Response 为 `(m,)`；若读取 CRP，其形状为 `(m,65)`，最后一列为 Response。读取函数由 [attacks/common.py](../attacks/common.py) 提供，检查形状、二进制取值和样本数。两文件必须保持同一行对应同一样本，不能只打乱其中一个。
 
-## 运行
+### 1.1 如何划分训练集和测试集
 
-```powershell
-python -m attacks.apuf_lr --crp-path data/crps.npy --test-size 0.25 --seed 42
+共用函数 `split_by_response()` 按 Response 的 0、1 类别分层：
+
+1. 用划分种子创建随机数生成器。
+2. 分别找出 0 类和 1 类的原始行号，在各类内部随机打乱。
+3. 每类按测试比例留出测试样本，数量向上取整，并保证训练和测试各至少有一条。
+4. 合并两类的训练行号、测试行号，再分别打乱顺序。
+5. 用同一组行号提取 Challenge 和 Response，保持配对。
+
+```python
+# 按响应类别分层划分，同时返回两侧的 Challenge 和对应标签
+# args.test_size 控制测试比例，args.seed 固定随机划分
+train_challenges, test_challenges, y_train, y_test = split_by_response(
+    challenges, responses, args.test_size, args.seed
+)
 ```
 
-省略 `--crp-path` 时读取 `puf.toml` 的 `default_crp`。用 `--config 路径` 或环境变量 `PUF_CONFIG` 可选择其他项目配置；配置中的相对路径以 TOML 文件所在目录为基准。
+因此，两类响应各至少需要两条。当前 500 条 APUF 数据有 224 个 0、276 个 1，测试比例 `0.25` 时：
 
-## 参数与输出
+```text
+0 类：56 条测试，168 条训练
+1 类：69 条测试，207 条训练
+合计：125 条测试，375 条训练
+```
 
-- `--crp-path`：输入 CRP NPY 文件。
-- `--test-size`：测试集比例，默认 `0.25`，必须在 0 和 1 之间。
-- `--seed`：训练/测试分层划分种子，默认 `42`。
-- `--config`：项目 TOML 配置文件。
+由于分别向上取整，其他批次的实际测试比例可能略高于设定值。训练和测试的行号互不重叠；若数据有重复 Challenge，要评估未见输入，还应先去重或按 Challenge 分组。
 
-程序输出 CRP 总数、训练和测试样本数、两侧准确率及测试集多数类基线。LR 的优化器内部默认最多迭代 5000 次、学习率 `0.1`、正则化系数 `0.001`；这些值当前不作为命令行参数。查看命令帮助：
+### 1.2 如何保证方法之间可比较
+
+LR、MLP、DNN 都使用这个划分函数。保持配对数据内容、行顺序、测试比例、划分种子和函数实现一致，即可得到相同的训练/测试样本；之后各方法使用自己的特征处理和模型。
+
+APUF 与 XOR-PUF 的响应类别可能不同，相同划分种子不保证两种 PUF 得到相同的分层行号。当前三个入口会按参数重新计算划分，尚未提供加载共同索引文件的选项。
+
+## 二、预测模型：结构与初始参数
+
+LR 使用转换后的 APUF 特征计算预测分数，再经 Sigmoid 输出 Response 为 1 的概率估计。末列特征固定为 `1`，承担偏置作用，所以 64 位 Challenge 对应 65 个待学习参数。
+
+特征处理复用 [puf/features.py](../puf/features.py)，只依赖 Challenge，不使用真实 PUF 权重。最终模型由**这套特征处理、学到的分类参数、Sigmoid 和判决阈值**共同构成。
+
+### 2.1 初始权重如何选择
+
+`fit_logistic_regression()` 将全部参数初始化为零：
+
+```python
+# 每个特征对应一个待学习参数；末项为偏置系数，全部从零开始
+weights = np.zeros(features.shape[1], dtype=np.float64)
+```
+
+此时每个样本的初始预测概率都是 `0.5`。LR 没有需要区分的多个隐藏神经元，因此这里可采用零初始化，不必借用目标 PUF 的参数，也不需要随机初始化种子。CLI 的 `--seed` 只控制数据划分。
+
+## 三、目标函数：误差与参数更新
+
+### 3.1 为什么使用二元交叉熵
+
+Response 只有 0、1 两类，模型输出的是概率，因此使用二元交叉熵衡量预测与训练标签的差异。真实标签为 1 时，预测概率越接近 1，损失越小；真实标签为 0 时，预测概率越接近 0，损失越小。“很确定但预测错误”的情况受到更大的惩罚。
+
+训练还加入 L2 正则化，约束过大的分类参数。末尾的偏置系数不受惩罚，当前正则化系数为 `0.001`。准确率用于评价结果，参数更新由损失对应的梯度指导。
+
+### 3.2 如何得到预测误差和梯度
+
+每轮用全部训练样本计算概率，并与已知 Response 比较。“预测概率减去标签”构成输出端误差信号，再结合各样本的特征计算每个参数的梯度：
+
+```python
+# 计算预测分数，再转换为每个训练样本的响应为 1 的概率
+probabilities = sigmoid(features @ weights)
+# 用概率与标签的差异计算梯度，并对训练样本取平均
+gradient = features.T @ (probabilities - labels) / labels.size
+# 加入 L2 正则化的梯度；penalty 的末项为 0，不惩罚偏置
+gradient += regularization * penalty * weights
+```
+
+误差信号反映预测偏离标签的程度，梯度反映调整各参数会怎样影响损失。`penalty` 的最后一项为 `0`，排除偏置的正则化影响。
+
+### 3.3 如何更新参数及停止训练
+
+采用批量梯度下降，沿梯度的反方向调整参数；学习率控制每次调整的幅度：
+
+```python
+# 学习率决定沿梯度方向计算出的更新幅度
+update = learning_rate * gradient
+# 向梯度反方向更新攻击模型参数
+weights -= update
+```
+
+当前最多迭代 5000 次，学习率为 `0.1`；更新向量的范数小于 `1e-8` 时提前停止。更新幅度小只是停止条件，不意味着全部样本已预测正确。
+
+代码直接计算损失的梯度，没有逐轮计算并输出损失值，也没有保存损失曲线。上述优化参数是函数默认值，当前不通过 CLI 修改。
+
+## 四、准确率：结果产生与衡量
+
+训练结束后固定学到的参数，用相同的特征处理分别预测训练集和测试集。概率大于或等于 `0.5` 预测为 1，否则为 0：
+
+```python
+# 使用训练好的参数预测测试集，以 0.5 为阈值输出整数 0/1
+test_predictions = (sigmoid(x_test @ weights) >= 0.5).astype(np.uint8)
+# 将预测与测试标签逐条比较，返回预测正确的比例
+test_accuracy = accuracy(y_test, test_predictions)
+```
+
+准确率按“预测正确条数 ÷ 样本总数”计算。**训练准确率**衡量模型对参与参数学习的样本的拟合程度；**测试准确率**衡量它对未参与训练的保留样本的预测能力。测试标签只用于最后核对，不用于参数更新。
+
+例如，在 375 条训练、125 条测试的划分下，若输出训练准确率 `100.00%`、测试准确率 `90.40%`，表示训练样本全部预测正确，测试样本正确 113 条、错误 12 条。这是学到的模型在该批数据上的表现，不代表能准确预测所有 Challenge。
+
+比较方法时，应固定同一组训练和测试样本，报告样本量、划分参数及两侧准确率。训练准确率高而测试准确率低，说明在当前划分下的泛化表现较差；若需要选择超参数，应另用验证集，避免用最终测试结果反复调参。
+
+## 五、运行与实际产物
+
+在项目根目录、已安装主项目依赖的环境中执行。直接读取合并前的数据：
 
 ```powershell
-python -m attacks.apuf_lr --help
+# 直接读取配对的 Challenge 和 Response；留出约 25% 测试样本，划分种子为 42
+python -m attacks.apuf_lr --challenge-path data/apuf/n64_w42_c42_m500_run01/challenges.npy --response-path data/apuf/n64_w42_c42_m500_run01/responses.npy --test-size 0.25 --seed 42
 ```
+
+或者读取合并后的 CRP：
+
+```powershell
+# 读取合并的 CRP；使用相同测试比例和划分种子，得到相同的训练/测试样本
+python -m attacks.apuf_lr --crp-path data/apuf/n64_w42_c42_m500_run01/crps.npy --test-size 0.25 --seed 42
+```
+
+- `--challenge-path`、`--response-path` 必须同时提供，不能与 `--crp-path` 同时使用。
+- 未指定输入时读取 `puf.toml` 中的 `default_crp`。
+- `--test-size` 默认 `0.25`，`--seed` 默认 `42`；`--config` 可指定项目配置。
+
+**训练产物**是内存中的分类参数；**终端输出**是样本数、训练准确率和测试准确率。当前入口没有把攻击模型、预测数组或训练过程保存为文件。损失函数是训练规则，不是最终保存的预测模型。
+
+本配置首先用于单 APUF。XOR-PUF 的响应组合一般不能由这里的单个线性判决模型表达，需要另行设计和评估。数据准备见 [Challenge/CRP 数据流程](Challenge与CRP数据流程.md)。

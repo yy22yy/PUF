@@ -25,6 +25,34 @@ def load_crps(path: str | Path) -> np.ndarray:
     return _validate_crps(value)
 
 
+def load_challenge_responses(
+    challenge_path: str | Path,
+    response_path: str | Path,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Load separate binary Challenge and Response NPY arrays paired by row."""
+    arrays = []
+    for path in (challenge_path, response_path):
+        value = np.load(Path(path), allow_pickle=False)
+        if not isinstance(value, np.ndarray):
+            value.close()
+            raise ValueError("Challenge 和 Response 文件必须是 NPY 数组")
+        arrays.append(value)
+    challenges, responses = arrays
+    if challenges.ndim != 2 or challenges.shape[1] < 1:
+        raise ValueError("Challenge 必须是至少包含 1 位的二维数组")
+    if responses.ndim == 2 and responses.shape[1] == 1:
+        responses = responses[:, 0]
+    if responses.ndim != 1:
+        raise ValueError("Response 必须是一维数组，或形状为 (样本数, 1) 的二维数组")
+    if challenges.shape[0] != responses.shape[0]:
+        raise ValueError("Challenge 和 Response 的样本数必须一致")
+    if not np.all((challenges == 0) | (challenges == 1)):
+        raise ValueError("Challenge 只能包含 0 和 1")
+    if not np.all((responses == 0) | (responses == 1)):
+        raise ValueError("Response 只能包含 0 和 1")
+    return challenges.astype(np.uint8), responses.astype(np.uint8)
+
+
 def load_crps_snapshot(path: str | Path) -> tuple[np.ndarray, str]:
     """Read and hash the same immutable byte snapshot used to parse a CRP."""
     payload = Path(path).read_bytes()

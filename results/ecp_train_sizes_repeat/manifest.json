@@ -1,0 +1,30 @@
+{
+  "source": "C:\\Users\\across\\Desktop\\PUF\\data\\crps.npy",
+  "source_sha256": "c055c28c42e463208beeeb65797cbba395b0139ee9f7ff47a78c4f852cc74d0b",
+  "unique_crps": 99999,
+  "bits": 32,
+  "train_sizes": [
+    1000,
+    5000,
+    10000,
+    20000,
+    50000,
+    74998
+  ],
+  "n_test": 25001,
+  "split_seed": 42,
+  "model_seeds": [
+    42,
+    43,
+    44
+  ],
+  "order": 1,
+  "rank": 4,
+  "epochs": 500,
+  "learning_rate": 0.01,
+  "test_label_zero_rate": 0.5403783848646054,
+  "test_label_one_rate": 0.45962161513539457,
+  "test_sha256": "9cf612163a5f2df61d9e538cb216ad3436c352f1bfb97acf922d48255eb14c5d",
+  "protocol": "nested prefixes of one shuffled training set; fixed held-out test; seeds change initialization only; full-batch training",
+  "status": "running"
+}

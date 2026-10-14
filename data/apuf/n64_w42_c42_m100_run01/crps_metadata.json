@@ -1,0 +1,48 @@
+{
+  "record_version": 1,
+  "puf": {
+    "type": "APUF",
+    "challenge_bits": 64,
+    "xor_count": 1,
+    "weight_seed": 42,
+    "weight_count": 65,
+    "weight_shape": [
+      65
+    ],
+    "component_weight_count": 65,
+    "weight_distribution": {
+      "name": "normal",
+      "loc": 0.0,
+      "scale": 1.0
+    },
+    "response_rule": "delay >= 0 -> 1; delay < 0 -> 0",
+    "weights_file": "puf_weights.npy",
+    "weights_sha256": "6325cfd36a81fa61f53d904a13f689d780ff4ebfa107ac45e42c0a91b067e3a3"
+  },
+  "sample_count": 100,
+  "challenge_bits": 64,
+  "response_bits": 1,
+  "crp": {
+    "file": "C:\\Users\\across\\Desktop\\PUF\\data\\apuf\\n64_w42_c42_m100_run01\\crps.npy",
+    "shape": [
+      100,
+      65
+    ],
+    "dtype": "uint8",
+    "row_format": "challenge bits first, one response bit last",
+    "values_sha256": "f3738bf26acff650da46f0476d563a6a69dba49c7ae9885603ea0131f9a3e7b7"
+  },
+  "challenge": {
+    "file": "C:\\Users\\across\\Desktop\\PUF\\data\\apuf\\n64_w42_c42_m100_run01\\challenges.npy",
+    "values_sha256": "7e7f74233f01c4fcc3c68d1bd4ab7037c0e2c70703f75c07b271837d185c3e80",
+    "generation_seed": 42
+  },
+  "response": {
+    "file": "C:\\Users\\across\\Desktop\\PUF\\data\\apuf\\n64_w42_c42_m100_run01\\responses.npy",
+    "values_sha256": "9f2f6dc2ca3abe96f69d354b415904374562b5e3a3e7e6dc9b83b59bd5ef9a66"
+  },
+  "response_metadata": {
+    "file": "C:\\Users\\across\\Desktop\\PUF\\data\\apuf\\n64_w42_c42_m100_run01\\responses_metadata.json",
+    "sha256": "f1e3eaea324b0292033d976231d0fddfe9b20e21c959857d74e2eaef984f07ed"
+  }
+}

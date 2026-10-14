@@ -1,0 +1,54 @@
+{
+  "record_version": 1,
+  "puf": {
+    "type": "XORAPUF",
+    "challenge_bits": 64,
+    "xor_count": 3,
+    "weight_seed": 42,
+    "weight_count": 195,
+    "weight_shape": [
+      3,
+      65
+    ],
+    "component_weight_count": 65,
+    "weight_distribution": {
+      "name": "normal",
+      "loc": 0.0,
+      "scale": 1.0
+    },
+    "response_rule": "XOR of component responses (delay >= 0 -> 1; delay < 0 -> 0)",
+    "weights_file": "puf_weights.npy",
+    "weights_sha256": "dd823218129f4aebb8f9564bb9e1a7fd867c0dddcb7a7373d676b6708e564808",
+    "component_seeds": [
+      2684470948,
+      4091952314,
+      233227757
+    ]
+  },
+  "sample_count": 500,
+  "challenge_bits": 64,
+  "response_bits": 1,
+  "crp": {
+    "file": "C:\\Users\\across\\Desktop\\PUF\\data\\xor_apuf\\k3_n64_w42_c42_m500_run01\\crps.npy",
+    "shape": [
+      500,
+      65
+    ],
+    "dtype": "uint8",
+    "row_format": "challenge bits first, one response bit last",
+    "values_sha256": "c906aeaf171f9bf04782efc888bec7e9b47df727ebb1bd689d7c7d3845e02340"
+  },
+  "challenge": {
+    "file": "C:\\Users\\across\\Desktop\\PUF\\data\\xor_apuf\\k3_n64_w42_c42_m500_run01\\challenges.npy",
+    "values_sha256": "501f2322e26584ac5b89138e732c42947469cb15d1d9d4806511c9953a8ed74b",
+    "generation_seed": 42
+  },
+  "response": {
+    "file": "C:\\Users\\across\\Desktop\\PUF\\data\\xor_apuf\\k3_n64_w42_c42_m500_run01\\responses.npy",
+    "values_sha256": "cb5fbb90d9b8ed31dab69af0564ba521975188c4be81d0a6bfc1d2d5bbc59a45"
+  },
+  "response_metadata": {
+    "file": "C:\\Users\\across\\Desktop\\PUF\\data\\xor_apuf\\k3_n64_w42_c42_m500_run01\\responses_metadata.json",
+    "sha256": "746330d83e5739fb7395cffef832b98ed839bb264eb17997591477a0a9aa6cd4"
+  }
+}

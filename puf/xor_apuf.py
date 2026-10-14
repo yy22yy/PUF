@@ -32,19 +32,24 @@ class XORAPUF(BasePUF):
         self.xor_count = xor_count
         self.seed = seed
 
-        # 先生成不同的子种子，再创建多个独立的 APUF。
-        seed_generator = np.random.default_rng(seed)
-        component_seeds = seed_generator.integers(
-            0,
-            np.iinfo(np.uint32).max,
-            size=xor_count,
-            dtype=np.uint32,
-        )
+        # 为每个子模型派生随机种子，并确保最终权重向量互不相同。
+        seed_sequence = np.random.SeedSequence(seed)
+        components: list[APUF] = []
+        while len(components) < xor_count:
+            component_seed = int(
+                seed_sequence.spawn(1)[0].generate_state(1, dtype=np.uint32)[0]
+            )
+            component = APUF(n=self.n, seed=component_seed)
 
-        self.components = tuple(
-            APUF(n=self.n, seed=int(component_seed))
-            for component_seed in component_seeds
-        )
+            if any(
+                np.array_equal(component.weights, existing.weights)
+                for existing in components
+            ):
+                continue
+
+            components.append(component)
+
+        self.components = tuple(components)
 
     def response(self, challenges: np.ndarray) -> np.ndarray:
         """输入 Challenge，返回多个 APUF Response 的 XOR 结果。"""

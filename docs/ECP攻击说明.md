@@ -1,102 +1,121 @@
-# ECP 攻击与教学示例：可执行说明
+# ECP-TRN 攻击：思路与框架
 
-## 模块职责与文件
+> **预处理与预测模型**
+>
+> APUF 特征转换是固定的输入预处理，不需要训练。ECP 描述预测模型内部的参数组织方式，TRN 使用这些参数进行预测计算。完整预测流程由“特征预处理 + 已训练模型”组成。
 
-此板块有 9 个主要实现文件：
+## 一、总体思路
 
-- `attacks/ecp/train.py`：统一训练入口。
-- `attacks/ecp/torch_backend.py`、`attacks/ecp/tensorflow_backend.py`：两个训练后端。
-- `attacks/ecp/common.py`：模型数学、数据和指标共用逻辑。
-- `attacks/ecp/records.py`：可重载实验记录与 NPZ/CSV 产物。
-- `attacks/ecp/evaluate.py`：重载模型并复算实验结果。
-- `attacks/ecp/compare.py`：比较两种后端的实验记录。
-- `attacks/ecp/__init__.py`：包入口。
-- `ecp_trn_minimal.py`：独立 PyTorch 教学原型，不属于统一记录流程。
+**先把 Challenge 转成 APUF 特征，再用“线性计算、乘积组合、加权求和”的模型学习 Response。**
 
-该 ECP 实验以单 APUF CRP 为输入。`rank` 是 CP 积分解的分量数；单 APUF 的 `order=1`，不表示多路 XOR PUF。正式入口会在新运行目录保存配置、数据摘要、划分、训练过程、模型、预测和指标。
+这三个部分组成模型的**预测计算流程**：线性计算得到分支分数，乘积组合表达分数之间的关系，加权求和形成最终分数。建立并初始化模型时，需要准备各分支的因子向量、各乘积分量的组合权重，以及最终偏置；训练负责学习这些参数。
 
-## 环境准备
+模型根据已知 Challenge 和 Response 学习自己的参数，训练结束后预测未参与训练的样本。目标 PUF 的真实权重不作为攻击输入。
 
-核心项目环境：
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -e .
+```text
+读取配对数据
+    ↓
+划分训练集与测试集
+    ↓
+转换为 APUF 阶段特征
+    ↓
+建立并初始化 ECP-TRN 模型
+    ↓
+根据训练误差更新参数
+    ↓
+固定参数，预测测试集并计算准确率
 ```
 
-ECP 训练后端按需安装。PyTorch：
+## 二、与其他攻击方法共用的部分
 
-```powershell
-python -m pip install -r requirements/ecp-torch.txt
+- **数据准备**：Challenge 与 Response 按行对应，检查样本数量和取值。
+- **数据划分**：按响应类别分层留出测试样本；对比方法时使用相同样本和划分。
+- **输入预处理**：使用 APUF 阶段特征，与 LR 和优化后的 MLP/DNN 共用计算规则。
+- **训练与评价**：用损失函数指导参数更新，训练完成后用测试准确率评价预测效果。
+
+特征转换提前整理 Challenge 各位之间的组合关系。之前 MLP/DNN 的对照实验表明，这种输入表示在相应实验设置下能改善测试预测；它没有直接提供 Response，也没有读取真实权重。
+
+## 三、ECP-TRN 模型的特点
+
+### 3.1 用因子组织模型参数
+
+这里的“因子”就是每个计算分支使用的一组可训练权重。我们直接学习这些小向量，让它们组成乘积模型，而不是先获得真实 PUF 参数，再把它们拆开。
+
+为什么这样组织？多个线性分数相乘后，如果把计算全部展开，会产生大量特征组合及对应系数。保留“几个小向量分别计算分数，再将分数相乘”的形式，可以避免显式存储和计算完整的展开数组。减少这类资源开销，是 ECP-TRN 方法提出时的主要目的。[原方法与作者代码介绍](https://cadforassurance.org/tools/attack-resilience/a-computationally-efficient-tensor-regression-network-based-modeling-attack-on-xor-arbiter-puf-and-its-variants/)
+
+例如，64 位 Challenge 转换后有 65 个特征，三个线性分数相乘的完整三维系数数组包含 274625 个位置；一个乘积分量只需三组 65 维因子，即 195 个因子参数。这个比较针对完整展开形式，不表示真实 PUF 本身有这么多独立参数，也不表示它一定比所有神经网络更省资源。
+
+设置多个乘积分量时，再通过组合权重将它们相加，形成 CP 分解式的模型表示。`rank` 控制分量数量，也会影响模型容量和参数量。理想 XOR-APUF 的乘积关系可以由一个分量表达，多个分量不是目标硬件结构的强制要求。
+
+### 3.2 模型内部怎样计算
+
+同一条输入特征送入多个计算分支，每个分支使用自己的参数得到连续分数。每组内部的分数相乘，各组乘积再加权求和，得到最终预测分数。
+
+```text
+一条输入特征
+    ├─ 第 1 组：多个分支分数相乘 → 组合分数 1
+    ├─ 第 2 组：多个分支分数相乘 → 组合分数 2
+    └─ 其他组：同样计算
+              ↓
+       加权求和并加偏置
+              ↓
+         最终预测分数
 ```
 
-TensorFlow：
+每组的分支数量由 `order` 控制，组合组数由 `rank` 控制。分支和组合系数共同训练，不需要各子 APUF 的真实响应作为标签。
 
-```powershell
-python -m pip install -r requirements/ecp-tensorflow.txt
+### 3.3 为什么提前设置乘积结构
+
+这一设想的依据来自目标 PUF 的计算结构：单 APUF 的响应由延迟分数的正负决定，XOR-PUF 将多个二进制响应进行奇偶组合。把二进制输出用正负符号表示后，符号相乘也能表示奇偶关系，因此可以用多个连续分数的乘积建立预测模型。[ECP-TRN 模型形式及分析](https://eprint.iacr.org/2021/555.pdf)
+
+直观地说，乘积中负数个数为偶数时结果为正，负数个数为奇数时结果为负；XOR 同样取决于输入中 1 的个数是奇数还是偶数。具体正负与 0/1 的对应取决于标签编码，模型的组合系数可以表示整体符号的调整。
+
+因此，我们提前把这种运算关系放进模型，而让训练学习各分支怎样计算分数。使用连续分数相乘，还能计算损失对参数的梯度；不必提前把每个分支硬判决成 0/1。
+
+这是一种根据已知目标结构设计模型的方式，不是提供真实权重，也不保证一定训练成功。是否有效，需要用相同数据划分下的测试准确率检验。
+
+这里有两个不同层面的设计：**特征转换整理输入位的关系，乘积结构组合模型计算的分数。** 原始 MLP/DNN 要自己学习输入位之间的关系，增加阶段特征后，在我们的对照实验中测试效果明显改善。ECP-TRN 在提供阶段特征的基础上，进一步预设组合分数的乘积运算；已有 MLP/DNN 对照仅验证了特征转换的帮助，不能直接证明乘积结构的收益。
+
+## 四、框架代码
+
+以下为流程伪代码，仅用于说明各部分的职责，不能直接运行。
+
+```text
+过程：建立模型
+    # 根据输入特征长度准备各分支参数
+    初始化因子向量
+    # 准备各乘积分量的组合参数
+    初始化组合权重和最终偏置
+
+过程：计算预测分数（输入特征）
+    对每个组合组：
+        # 同一条输入分别经过本组的计算分支
+        计算各分支的线性分数
+        # 保留连续分数，便于训练时计算梯度
+        将本组分数相乘
+    # 合成一个最终分数
+    加权汇总各组乘积并加偏置
+    返回最终分数
+
+过程：训练模型（训练特征，训练标签）
+    重复训练：
+        # 前向计算，预测训练样本
+        得到预测分数
+        # 比较预测与已知 Response
+        计算二分类损失
+        # 所有模型参数依据同一个最终损失学习
+        计算梯度并更新参数
+    返回训练后的模型
+
+过程：评价模型（测试特征，测试标签）
+    # 测试阶段固定参数，不再更新
+    计算预测分数并判决为 0 或 1
+    # 与保留的已知响应核对
+    统计正确条数并计算测试准确率
 ```
 
-两个后端依赖较大，建议各自使用隔离虚拟环境。`requirements/ecp-torch.txt` 和 `requirements/ecp-tensorflow.txt` 的锁定目标平台见 `attacks/ecp/README.md`；Windows 等其他平台可从对应 `.in` 文件安装依赖：
+## 五、结果与当前实现范围
 
-```powershell
-python -m pip install -r requirements/ecp-torch.in
-```
+训练产物是学到的因子向量、组合权重和偏置；损失函数是训练规则，准确率是评价指标。训练准确率反映拟合情况，测试准确率反映保留样本的预测能力。
 
-或：
-
-```powershell
-python -m pip install -r requirements/ecp-tensorflow.in
-```
-
-## 训练
-
-在仓库根目录、已激活相应环境后运行：
-
-```powershell
-python -m attacks.ecp.train --backend torch --crp data/crps.npy --epochs 200
-```
-
-或：
-
-```powershell
-python -m attacks.ecp.train --backend tensorflow --crp data/crps.npy --epochs 200
-```
-
-训练默认使用 `rank=4`、`batch-size=256`、`learning-rate=0.001`、`test-size=0.25`、`seed=42`。省略 `--output` 时，在配置的 `runs_dir` 下面创建新目录；如需固定目录，传入尚不存在的路径：
-
-```powershell
-python -m attacks.ecp.train --backend torch --crp data/crps.npy --output runs/ecp-torch-manual
-```
-
-程序拒绝覆盖已有运行目录。每个运行文件夹应保留完整，作为评估和比较的输入。
-
-## 重载评估与后端对比
-
-重载并使用 NumPy 复算：
-
-```powershell
-python -m attacks.ecp.evaluate --run runs/实际运行目录
-```
-
-需要用已安装的框架重新计算时，添加 `--backend torch` 或 `--backend tensorflow`。如 CRP 被移动，可以用 `--crp` 指定新路径；文件内容必须与原记录一致。
-
-两种后端都训练完成后进行对比：
-
-```powershell
-python -m attacks.ecp.compare --runs runs/torch运行目录 runs/tensorflow运行目录
-```
-
-比较要求两次实验使用相同 CRP、训练协议、数据划分及初始化参数。运行命令的完整说明也见 [`attacks/ecp/README.md`](../attacks/ecp/README.md)。
-
-## 独立教学原型
-
-`ecp_trn_minimal.py` 可以使用小规模合成数据演示，也可读取外部 CRP：
-
-```powershell
-python -m pip install torch
-python ecp_trn_minimal.py --epochs 50
-python ecp_trn_minimal.py --crp-path data/crps.npy --order 1 --epochs 50
-```
-
-此脚本是简化教学示例，不生成正式 ECP 运行记录。其训练耗时和结果受硬件及依赖版本影响。
+当前正式 ECP 入口固定为单分支，乘积计算退化为线性计算，主要用于单 APUF 实验及结果保存。教学版已有可调阶数的多分支结构。上面的框架描述完整的乘积模型思路，不表示正式入口已经支持完整的多分支 XOR-PUF 攻击流程。

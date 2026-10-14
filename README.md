@@ -2,9 +2,13 @@
 
 项目各模块的文件清单和可执行命令见[模块运行说明](docs/模块总览.md)。
 
-默认数据与实验目录集中配置在根目录 `puf.toml`。Challenge/CRP 生成脚本、LR/MLP/DNN 和 ECP 训练入口以配置文件所在目录作为项目根目录；可通过 `PUF_CONFIG=/path/to/puf.toml` 指定配置文件，各 CLI 入口也支持 `--config`。配置中的相对路径按 `puf.toml` 所在目录解析，而非依赖启动命令时所在目录。显式传入的相对文件路径也按配置文件位置解析。
+## 配置说明
 
-所有 NPZ 文件必须配套 CSV：`name.npz` 对应 `name.csv`（数组清单）以及每个成员的 `name__成员名.csv`（展开后的数组数据）。NPZ 保留精确类型和形状，CSV 便于查看和交换。新增 NPZ 写入点时也必须遵循此规则；ECP 实验使用 `save_npz_with_csv` / `save_parameters`。
+默认数据与实验目录集中配置在根目录 `puf.toml`。Challenge/CRP 生成脚本、LR/MLP/DNN 和 ECP 训练入口以配置文件所在目录作为项目根目录。
+
+## 数据说明
+
+所有 NPZ 文件必须配套 CSV：`name.npz` 对应 `name.csv`（数组清单）以及每个成员的 `name__成员名.csv`（展开后的数组数据）。NPZ 保留精确类型和形状，CSV 便于查看和交换。新增 NPZ 写入点时也必须遵循此规则。
 
 ## 统一实验流程（后续规范）
 
@@ -21,11 +25,59 @@
 9. **生成实验清单**：记录配置、代码版本、运行环境、输入摘要、开始/结束时间、完成状态及所有产物的摘要。
 10. **重载验证**：从实验记录重载模型与数据，复算指标和预测，并验证结果与已保存记录一致。
 
-一次实验应能据此回答：用了什么 PUF 和数据、如何划分、运行了哪个攻击及参数、训练是否完成、结果是什么，以及是否能够重载复算。当前 ECP 原型已经实现其中一部分记录与重载验证；将 LR、MLP、DNN 和 PUF/CRP 生成流程接入统一运行记录，是后续完善方向。
+一次实验应能据此回答：用了什么 PUF 和数据、如何划分、运行了哪个攻击及参数、训练是否完成、结果是什么，以及是否能够重载复算。
+
+## PUF 模拟仿真
+
+参考 [PUF 仿真说明](docs/PUF仿真说明.md)，先创建模型并生成权重。以下单行命令在项目根目录、已安装项目依赖的环境中运行。
+
+### 创建 32 位 APUF
+
+```powershell
+python -m puf --n 32 --seed 42
+```
+
+输入：Challenge 位数 `n=32`、模型权重种子 `seed=42`。
+
+输出：终端显示 33 个等效权重参数，形状为 `(33,)`；末项是常数项系数。
+
+### 创建 32 位 3-XOR APUF
+
+```powershell
+python -m puf --n 32 --xor-count 3 --seed 42
+```
+
+输入：Challenge 位数 `n=32`、子 APUF 数量 `xor_count=3`、模型种子 `seed=42`。
+
+输出：终端显示 3 组不同的子 APUF 权重，形状为 `(3, 33)`。
+
+此阶段仅创建模型并生成权重，尚未输入 Challenge 或计算 Response；命令不保存文件。后续先生成 Challenge，再调用模型计算响应。
 
 ## Challenge 生成
 
 `challenge.py` 主要用于生成 Challenge 数组。它只负责生成由 `0` 和 `1` 组成的二维数组，不负责计算 PUF 的 Response。
+
+例如，3 组、每组 6 位的 Challenge 数组如下，形状为 `(3, 6)`：
+
+```text
+[[0, 1, 0, 1, 1, 0],
+ [1, 0, 1, 0, 0, 1],
+ [1, 1, 0, 0, 1, 0]]
+```
+
+对应一个 6 位 APUF，模型有 7 个等效权重参数。下面以列矩阵形式展示一组示例权重，形状为 `(7, 1)`：
+
+```text
+[[ 0.12],
+ [-0.35],
+ [ 0.48],
+ [ 0.21],
+ [-0.17],
+ [ 0.63],
+ [-0.08]]
+```
+
+最后一个参数 `-0.08` 是常数项系数；这组权重由同一个 APUF 对所有 Challenge 复用。以上数值仅用于举例，项目中的 `APUF.weights` 实际保存为形状 `(7,)` 的一维向量。
 
 数组的行表示 Challenge 的组数，列表示每组 Challenge 的位数。例如，生成 100 组、每组 64 位的 Challenge，数组形状为 `(100, 64)`。
 
@@ -81,13 +133,15 @@ python challenge_data.py --num 100 --c_bit 64 --seed 42 --path data/challenges.n
 
 ## 生成 PUF Response
 
-`generate_crp.py` 是一次实验的入口：它读取已经保存的 Challenge，创建一个 APUF 仿真实例，计算对应的 Response，并把 Response 同时保存为 `.npy` 和同名 `.csv` 文件。Challenge 和 Response 按行一一对应，因此两者可以组成 CRP（Challenge–Response Pair）。CSV 中每行保存一个 0/1 Response。
+`generate_crp.py` 是一次实验的入口：它读取已经保存的 Challenge，默认创建一个 APUF 仿真实例，计算对应的 Response，并把 Response 同时保存为 `.npy` 和同名 `.csv` 文件。Challenge 和 Response 按行一一对应，因此两者可以组成 CRP（Challenge–Response Pair）。CSV 中每行保存一个 0/1 Response。
 
 ```bash
 python generate_crp.py --challenge-path data/challenges.npy --response-path data/responses.npy --challenge-seed 7 --seed 42
 ```
 
-`--challenge-path` 指定输入 Challenge 文件，`--response-path` 指定 Response NPY 输出文件，程序会在同一目录下用相同文件名生成 CSV，`--seed` 决定仿真 APUF 的权重；可选的 `--challenge-seed` 用于记录生成 Challenge 时的种子。程序还会单独保存 PUF 权重为 `responses_puf_weights.npy/.csv`，并写出 `responses_metadata.json`，记录模型配置、输入/输出数组摘要、Python/NumPy/平台信息，以及生成脚本和 APUF 实现的源文件摘要。权重是实验真值，不会被合并进攻击使用的 CRP 文件；不要把权重文件提供给攻击模型。
+生成 XOR-PUF 数据时增加 `--puf-type xor-apuf --xor-count 3`。两类数据应分目录保存；可复制的完整命令和目录命名规则见 [直接运行](直接运行.md)。
+
+`--challenge-path` 指定输入 Challenge 文件，`--response-path` 指定 Response NPY 输出文件，程序会在同一目录下用相同文件名生成 CSV，`--seed` 决定仿真 APUF 的权重；可选的 `--challenge-seed` 用于记录生成 Challenge 时的种子。程序还会单独保存 PUF 权重为 `puf_weights.npy/.csv`，并写出 `responses_metadata.json`，记录模型配置、输入/输出数组摘要、Python/NumPy/平台信息，以及生成脚本和 APUF 实现的源文件摘要。权重是实验真值，不会被合并进攻击使用的 CRP 文件；不要把权重文件提供给攻击模型。
 
 ### 合并为 CRP 数据
 
@@ -99,6 +153,8 @@ python merge_crp.py --challenge-path data/challenges.npy --response-path data/re
 
 输出是同名的二维 `.npy` 和 `.csv` 数组，每行依次包含 Challenge 的所有位和最后一位 Response。例如 32 位 Challenge 对应的 CRP 矩阵形状为 `(样本数, 33)`。因此读取后可用 `crps[:, :-1]` 取得 Challenge，用 `crps[:, -1]` 取得 Response。合并时程序会检查样本数量一致，且 Response 只包含 0/1。
 
+合并时还会生成 `crps_metadata.json`，记录模型类型、子模型数量、种子和输入来源；有响应元数据时会校验输入数据摘要。APUF 和 XOR-PUF 的 CRP 形状相同，需通过元数据识别模型类型。
+
 ## 单个 APUF 的 Logistic Regression 攻击
 
 `attacks/apuf_lr.py` 使用合并后的 CRP 训练一个 Logistic Regression 分类器，并用保留的测试集评估它对未见 Challenge 的预测准确率。模型只读取 CRP，不读取 APUF 的内部权重或生成种子。攻击会使用 `ChallengeFeatureTransformer` 生成的 APUF 阶段特征；逻辑回归的梯度下降由 NumPy 实现，不需要安装额外机器学习依赖。
@@ -107,7 +163,7 @@ python merge_crp.py --challenge-path data/challenges.npy --response-path data/re
 python -m attacks.apuf_lr --crp-path data/crps.npy --test-size 0.25 --seed 42
 ```
 
-默认将 25% 的 CRP 留作测试集，并按 Response 类别分层抽样。程序会报告训练准确率、测试准确率和测试集多数类基线。测试集准确率用于衡量对未见样本的预测效果；多数类基线可帮助判断模型是否优于简单地总猜同一类。当前 `data/crps.npy` 包含 10,000 条 32 位 Challenge 的 CRP；评估攻击效果时仍应报告数据来源、划分种子及测试条件。
+默认将 25% 的 CRP 留作测试集，并按 Response 类别分层抽样。程序会报告训练准确率和测试准确率。测试集准确率用于衡量对未见样本的预测效果。当前默认数据目录见 [数据说明](data/README.md)；评估攻击效果时应报告实际输入数据的来源、划分种子及测试条件。
 
 ## Challenge 特征转换
 
@@ -136,7 +192,7 @@ python -m attacks.apuf_mlp --crp-path data/crps.npy --epochs 300 --seed 42
 python -m attacks.apuf_dnn --crp-path data/crps.npy --epochs 300 --seed 42
 ```
 
-`attacks/apuf_mlp.py` 和 `attacks/apuf_dnn.py` 分别运行浅层 MLP 和较深的 DNN；两者共用 `attacks/neural_net.py` 的训练实现。`attacks/common.py` 提供 CRP 检查、相同的分层数据划分和准确率计算。三个入口都会留出测试集，并报告训练准确率、测试准确率和多数类基线。也可以调整 `--test-size`、`--batch-size` 和 `--learning-rate`。比较攻击效果时，使用相同数据集和划分参数即可复用同一训练/测试集。
+`attacks/apuf_mlp.py` 和 `attacks/apuf_dnn.py` 分别运行浅层 MLP 和较深的 DNN；两者共用 `attacks/neural_net.py` 的训练实现。`attacks/common.py` 提供 CRP 检查、相同的分层数据划分和准确率计算。三个入口都会留出测试集，并报告训练准确率和测试准确率。也可以调整 `--test-size`、`--batch-size` 和 `--learning-rate`。比较攻击效果时，使用相同数据集和划分参数即可复用同一训练/测试集。
 
 ## 单 APUF ECP 原型
 

@@ -1,0 +1,55 @@
+{
+  "record_version": 2,
+  "puf": {
+    "type": "XORAPUF",
+    "challenge_bits": 64,
+    "xor_count": 3,
+    "weight_seed": 42,
+    "weight_count": 195,
+    "weight_shape": [
+      3,
+      65
+    ],
+    "component_weight_count": 65,
+    "weight_distribution": {
+      "name": "normal",
+      "loc": 0.0,
+      "scale": 1.0
+    },
+    "response_rule": "XOR of component responses (delay >= 0 -> 1; delay < 0 -> 0)",
+    "weights_file": "puf_weights.npy",
+    "weights_sha256": "dd823218129f4aebb8f9564bb9e1a7fd867c0dddcb7a7373d676b6708e564808",
+    "component_seeds": [
+      2684470948,
+      4091952314,
+      233227757
+    ]
+  },
+  "challenge": {
+    "file": "C:\\Users\\across\\Desktop\\PUF\\data\\xor_apuf\\k3_n64_w42_c42_m100_run01\\challenges.npy",
+    "shape": [
+      100,
+      64
+    ],
+    "generation_seed": 42,
+    "values_sha256": "7e7f74233f01c4fcc3c68d1bd4ab7037c0e2c70703f75c07b271837d185c3e80"
+  },
+  "response": {
+    "file": "responses.npy",
+    "shape": [
+      100
+    ],
+    "values_sha256": "e1f4b20a2698807e6cc6932f945e7d15d57ec9fe480fd8f93f2e914d574584a0"
+  },
+  "environment": {
+    "python": "3.13.5 | packaged by Anaconda, Inc. | (main, Jun 12 2025, 16:37:03) [MSC v.1929 64 bit (AMD64)]",
+    "numpy": "2.2.4",
+    "platform": "Windows-11-10.0.26100-SP0"
+  },
+  "source_sha256": {
+    "generate_crp.py": "9649df51f43f07c154c867fdc336110c3e2f3c23e68ee274c010a390c4e58eeb",
+    "puf\\apuf.py": "c5b6d7aa5f16f13e547cafb6130ada35ade9e44cecaa8fa785667642b33112bd",
+    "puf\\features.py": "b4f4616281f2b583c62e26b69d152c1a2b4f27892391486c37c4110c564b28c3",
+    "puf\\xor_apuf.py": "ea0531ed02dd6f4abe7b975aaf159d87271258d050245754cf9adf0bc454f2ea"
+  }
+}

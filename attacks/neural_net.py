@@ -4,7 +4,8 @@ import argparse
 
 import numpy as np
 
-from attacks.common import accuracy, load_crps, majority_baseline, split_by_response
+from attacks.common import accuracy, load_crps, split_by_response
+from puf.features import ChallengeFeatureTransformer
 from project_config import load_project_config, resolve_project_path
 
 
@@ -14,6 +15,17 @@ def relu(values: np.ndarray) -> np.ndarray:
 
 def sigmoid(values: np.ndarray) -> np.ndarray:
     return 1.0 / (1.0 + np.exp(-np.clip(values, -500.0, 500.0)))
+
+
+def prepare_features(challenges: np.ndarray, mode: str = "raw") -> np.ndarray:
+    """Prepare the same number of network inputs from binary Challenges."""
+    if mode == "raw":
+        # 原始模式：只把每个 0/1 位映射到 -1/+1。
+        return 2.0 * np.asarray(challenges, dtype=np.float64) - 1.0
+    if mode == "apuf":
+        # 特征模式：计算阶段累积乘积；网络自带偏置，因此去掉常数列。
+        return ChallengeFeatureTransformer().transform(challenges)[:, :-1]
+    raise ValueError("features 必须为 raw 或 apuf")
 
 
 class BinaryMLP:
@@ -140,6 +152,7 @@ def run_attack(
     parser.add_argument("--batch-size", type=int, default=64, help="每次更新使用的样本数")
     parser.add_argument("--learning-rate", type=float, default=0.001, help="学习率")
     parser.add_argument("--seed", type=int, default=42, help="划分及训练随机种子")
+    parser.add_argument("--features", choices=("raw", "apuf"), default="raw", help="输入表示：raw 为原始位映射，apuf 为阶段特征；默认 raw")
     args = parser.parse_args(argv)
 
     project_root, paths = load_project_config(args.config)
@@ -163,10 +176,10 @@ def run_attack(
         args.seed,
     )
 
-    # Center raw Challenge bits in [-1, 1]; the network learns the mapping itself.
-    train_x = 2.0 * train_x - 1.0
-    test_x = 2.0 * test_x - 1.0
-    model = BinaryMLP(challenges.shape[1], hidden_layers, args.seed)
+    # 划分完成后，训练与测试输入使用相同的处理；标签与行对应关系不变。
+    train_x = prepare_features(train_x, args.features)
+    test_x = prepare_features(test_x, args.features)
+    model = BinaryMLP(train_x.shape[1], hidden_layers, args.seed)
     model.fit(
         train_x,
         train_y,
@@ -180,10 +193,8 @@ def run_attack(
     test_predictions = (model.predict_proba(test_x) >= 0.5).astype(np.uint8)
     train_accuracy = accuracy(train_y, train_predictions)
     test_accuracy = accuracy(test_y, test_predictions)
-    baseline_accuracy = majority_baseline(test_y)
 
-    print(f"模型：{name}，隐藏层：{hidden_layers}")
+    print(f"模型：{name}，隐藏层：{hidden_layers}；输入特征：{args.features}")
     print(f"CRP 总数：{len(crps)}；训练样本：{len(train_y)}；测试样本：{len(test_y)}")
     print(f"训练准确率：{train_accuracy:.2%}")
     print(f"测试准确率：{test_accuracy:.2%}")
-    print(f"测试集多数类基线：{baseline_accuracy:.2%}")

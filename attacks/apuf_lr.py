@@ -4,7 +4,7 @@ import argparse
 
 import numpy as np
 
-from attacks.common import accuracy, load_crps, majority_baseline, split_by_response
+from attacks.common import accuracy, load_challenge_responses, load_crps, split_by_response
 from puf.features import ChallengeFeatureTransformer
 from project_config import load_project_config, resolve_project_path
 
@@ -54,6 +54,8 @@ def main() -> None:
         default=0.25,
         help="测试集比例，默认 0.25",
     )
+    parser.add_argument("--challenge-path", help="单独保存的 Challenge NPY 文件，需同时提供 --response-path")
+    parser.add_argument("--response-path", help="单独保存的 Response NPY 文件，需同时提供 --challenge-path")
     parser.add_argument(
         "--seed",
         type=int,
@@ -63,19 +65,31 @@ def main() -> None:
     parser.add_argument("--config", help="项目 TOML 配置；也可通过 PUF_CONFIG 指定")
     args = parser.parse_args()
 
-    project_root, paths = load_project_config(args.config)
-    crp_path = resolve_project_path(args.crp_path, project_root) if args.crp_path else paths["default_crp"]
+    separate_input = args.challenge_path is not None or args.response_path is not None
+    if separate_input and (args.challenge_path is None or args.response_path is None):
+        parser.error("--challenge-path 和 --response-path 必须同时提供")
+    if separate_input and args.crp_path is not None:
+        parser.error("分开的 Challenge/Response 输入不能与 --crp-path 同时使用")
 
-    # CRP 每行格式为 [Challenge 的各位..., Response]。
+    project_root, paths = load_project_config(args.config)
+
     try:
-        crps = load_crps(crp_path)
+        if separate_input:
+            challenges, responses = load_challenge_responses(
+                resolve_project_path(args.challenge_path, project_root),
+                resolve_project_path(args.response_path, project_root),
+            )
+        else:
+            # CRP 每行格式为 [Challenge 的各位..., Response]。
+            crp_path = resolve_project_path(args.crp_path, project_root) if args.crp_path else paths["default_crp"]
+            crps = load_crps(crp_path)
+            challenges = crps[:, :-1]
+            responses = crps[:, -1].astype(np.uint8)
     except (OSError, ValueError) as error:
         parser.error(str(error))
     if not 0.0 < args.test_size < 1.0:
         parser.error("--test-size 必须大于 0 且小于 1")
 
-    challenges = crps[:, :-1]
-    responses = crps[:, -1].astype(np.uint8)
     labels, counts = np.unique(responses, return_counts=True)
     if labels.size != 2 or np.min(counts) < 2:
         parser.error("CRP 中的 Response 必须同时包含 0 和 1，且每类至少有 2 条样本")
@@ -99,13 +113,11 @@ def main() -> None:
     test_predictions = (sigmoid(x_test @ weights) >= 0.5).astype(np.uint8)
     train_accuracy = accuracy(y_train, train_predictions)
     test_accuracy = accuracy(y_test, test_predictions)
-    baseline_accuracy = majority_baseline(y_test)
 
-    print(f"CRP 总数：{len(crps)}")
+    print(f"CRP 总数：{len(challenges)}")
     print(f"训练样本：{len(y_train)}；测试样本：{len(y_test)}")
     print(f"训练准确率：{train_accuracy:.2%}")
     print(f"测试准确率：{test_accuracy:.2%}")
-    print(f"测试集多数类基线：{baseline_accuracy:.2%}")
 
 
 if __name__ == "__main__":

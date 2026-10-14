@@ -13,7 +13,8 @@ class APUF(BasePUF):
         """创建一个 APUF。
 
         参数：
-            n: Challenge 位数；APUF 会生成 n+1 个内部权重。
+            n: Challenge 位数，对应标准 APUF 的开关级数；模型生成
+                n+1 个等效延迟参数，末项为常数项系数。
             seed: 权重随机种子；相同参数会得到相同的 PUF 实体。
         """
         # 调用 BasePUF 的初始化逻辑，检查并保存 self.n。
