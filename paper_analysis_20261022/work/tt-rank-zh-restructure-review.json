@@ -1,0 +1,87 @@
+{
+  "status": "passed_static_checks_and_source_crosscheck",
+  "date": "2026-10-31",
+  "revision": "three-topics-chinese-final-and-english-translation",
+  "outputs": [
+    {
+      "file": "tt-rank-derivation-zh.md",
+      "lines": 277,
+      "sha256": "75c4c97897bc6fab032299f4ee155733a0b240faf398e8bbc3046cb58a6b6e4f"
+    },
+    {
+      "file": "tt-rank-paper-zh.md",
+      "lines": 70,
+      "sha256": "416cb951fa258248860bbcca1d7efd5f0b058427ea0ad0c5f0d2f5096045fd3e"
+    },
+    {
+      "file": "tt-rank-paper-en.md",
+      "lines": 70,
+      "sha256": "587f0d593e3e49bb3639ee73fe04a5b38b431ccadb21610c4801466306741104"
+    }
+  ],
+  "checks": [
+    "tt-rank-derivation-zh.md: math delimiters/braces balanced; local links exist",
+    "tt-rank-paper-zh.md: math delimiters/braces balanced; local links exist",
+    "tt-rank-paper-en.md: math delimiters/braces balanced; local links exist",
+    "Chinese/English: three topics; identical equations P1-P5, inline formula inventory, reference identifiers and source URLs",
+    "Exact arithmetic identities: mirrored dimension bounds and uniform-budget core counts"
+  ],
+  "source_crosscheck": [
+    {
+      "file": "source.pdf",
+      "pdf_pages_read": [
+        6,
+        7,
+        8
+      ],
+      "sha256": "869ef2a87126fbe45e72ece484080963c744db5c34e8c3ae12f42e1bce62a1ad"
+    },
+    {
+      "file": "work/khavari-rabusseau-2021.pdf",
+      "pdf_pages_read": [
+        1,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "sha256": "7e720efbe1161dfdfc57435308abbce47e3fd39780020c0a5cd7278666830bf4"
+    },
+    {
+      "file": "work/khavari-rabusseau-2021-supplement.pdf",
+      "pdf_pages_read": [
+        1,
+        2,
+        3
+      ],
+      "sha256": "5f272b776b6ea0c8116b0d9c24b68f7afe459d92282c6863138caf4cca5e3348"
+    },
+    {
+      "file": "/Users/across/Desktop/pre-summer-paper/papers/PUF/tensor_textbook.pdf",
+      "pdf_pages_read": [
+        1,
+        2,
+        165,
+        168,
+        171
+      ],
+      "sha256": "b327d14e90a68f9c437e52a45a3d811ac24c077b3a4fae057bdba55d33515486"
+    }
+  ],
+  "manual_review": [
+    "P1: direct matrix factorization; textbook PDF 171",
+    "P2: textbook Remarks 8.1 and 8.4 plus mirror-index calculation",
+    "P3: compact SVD construction and minimum-term rank argument",
+    "P4: Theorem 2; supplementary A.1.1 explicitly uses base-2 logarithm",
+    "P5: Theorem 4 and Corollary 6; supplementary A.1.2 crosschecked; fixed confidence and sample-size regime retained",
+    "English prose reviewed for matching claim strength and definitions; symmetry remains a design rationale, not an optimality theorem"
+  ],
+  "limits": [
+    "No author approval is inferred from this check",
+    "No training, hyperparameter search, or numerical experiments; arithmetic identity checks only",
+    "No mathematical rendering or browser validation",
+    "Supplementary A.1.1-A.1.2 read; remaining proofs not independently audited",
+    "Capacity bounds concern the fixed-feature TT inner-product classifier, not automatically all TENAX output controls or learned preprocessing"
+  ]
+}

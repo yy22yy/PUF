@@ -1,0 +1,29 @@
+{
+  "train_sizes": [
+    1000,
+    5000,
+    10000,
+    20000,
+    50000,
+    74998
+  ],
+  "model_seeds": [
+    42,
+    43,
+    44
+  ],
+  "rank": 4,
+  "order": 1,
+  "epochs": 500,
+  "learning_rate": 0.01,
+  "batch_size": "full",
+  "test_size": 0.25,
+  "split_seed": 42,
+  "optimizer": {
+    "name": "Adam",
+    "beta1": 0.9,
+    "beta2": 0.999,
+    "epsilon": 1e-08
+  },
+  "prediction_rule": "logit >= 0 -> 1"
+}

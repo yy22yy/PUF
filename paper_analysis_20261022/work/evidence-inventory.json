@@ -1,0 +1,64 @@
+{
+  "source": "../source.pdf",
+  "source_coverage": "full PDF, 14 pages; no code, logs, configurations, supplements",
+  "locator_mode": "page-grounded",
+  "context_mode": "paper-only",
+  "title_verified_from_first_page": "TENAX: Tensor-Train Driven PUF Modeling Under Strict Query Constraints",
+  "automatic_extraction_notes": [
+    "Bundled prepare_paper.py succeeded after installing PyMuPDF in /tmp; no skill scripts were modified.",
+    "Raw source_bundle.json reports title metadata unavailable; title was read on PDF page 1.",
+    "Raw caption parser misses Roman-numbered tables; seven tables were inventoried manually.",
+    "Raw source bundle mistakes 29672 on page 11 for a printed page label; report uses PDF page indices exclusively.",
+    "Some automatically collected caption text includes adjacent paragraphs; manual descriptions below are used in report."
+  ],
+  "figures": [
+    {"id":"Figure 1","pdf_page":3,"role":"APUF schematic and physical-model motivation"},
+    {"id":"Figure 2","pdf_page":4,"role":"Majority-prior-only naive-LLM protocol heatmap"},
+    {"id":"Figure 3","pdf_page":6,"role":"TENAX architecture, expanded features and TT contractions","visually_reviewed":true},
+    {"id":"Figure 4","pdf_page":9,"role":"Expanded-feature ablation in four configurations with 10 trials; not TT-rank sensitivity"},
+    {"id":"Figure 5","pdf_page":11,"role":"Aggregate accuracy, query budget, runtime across XOR configurations","visually_reviewed":true},
+    {"id":"Figure 6","pdf_page":13,"role":"FPGA placement and two platforms"}
+  ],
+  "tables": [
+    {"id":"Table I","pdf_page":3,"role":"Qualitative method taxonomy"},
+    {"id":"Table II","pdf_page":10,"role":"XOR-APUF budgets, runtime, accuracy","visually_reviewed":true},
+    {"id":"Table III","pdf_page":11,"role":"CP and TENAX trainable-parameter counts","visually_reviewed":true},
+    {"id":"Table IV","pdf_page":12,"role":"Response-only CMA-ES comparison"},
+    {"id":"Table V","pdf_page":12,"role":"Noise-free iPUF comparisons"},
+    {"id":"Table VI","pdf_page":12,"role":"LSPUF comparisons"},
+    {"id":"Table VII","pdf_page":13,"role":"FPGA XOR, iPUF and LSPUF results"}
+  ],
+  "equations": [
+    {"id":"Equation 1","pdf_page":3,"role":"Parity transform"},
+    {"id":"Equation 2","pdf_page":3,"role":"XOR physical product and tensor-product representation"},
+    {"id":"Equation 3","pdf_page":3,"role":"LSPUF chain-specific inputs"},
+    {"id":"Equation 4","pdf_page":6,"role":"Mode product / unfolding notation"},
+    {"id":"Equation 5","pdf_page":6,"role":"Tensor inner product"},
+    {"id":"Equation 6","pdf_page":6,"role":"TT slice chain"},
+    {"id":"Equation 7","pdf_page":6,"role":"TT index sum and boundary ranks"},
+    {"id":"Equation 8","pdf_page":7,"role":"Regression score and bias"},
+    {"id":"Equation 9","pdf_page":7,"role":"Input feature tensor"},
+    {"id":"Equation 10","pdf_page":7,"role":"Ideal outer-product weight tensor"},
+    {"id":"Equation 11","pdf_page":7,"role":"TT representation of learned weights"},
+    {"id":"Equation 12","pdf_page":7,"role":"Outer-product feature entries"},
+    {"id":"Equation 13","pdf_page":7,"role":"Contraction reduces inner product to small-matrix chain"},
+    {"id":"Equation 14","pdf_page":7,"role":"Per-core contraction with parity vector"},
+    {"id":"Equation 15","pdf_page":12,"role":"Chain-specific contraction for LSPUF"}
+  ],
+  "key_claims": [
+    {"claim":"64-bit 4-XOR reported performance","source":"PDF p.10 Table II","reported":{"crp_budget":10000,"runtime_seconds":24,"accuracy_percent":98.48},"boundary":"No full rank vector or seed-level trial history for this row"},
+    {"claim":"TT parameter-count upper bound","source":"PDF p.8 Theorem 1","boundary":"Conditional on chosen ranks; does not prove accuracy, optimal rank or sample complexity"},
+    {"claim":"Feature-expansion benefit","source":"PDF p.9 Figure 4","boundary":"No rank sweep or full dimension/parameter-matched mechanism controls"},
+    {"claim":"Theorem 2 lower-bound issue","source":"PDF p.8 Theorem 2","provenance":"Analysis","boundary":"Big-O upper-bound condition alone permits all ranks equal to one"}
+  ],
+  "contradictions": [
+    {"item":"64-bit 8-XOR TENAX CRPs","locations":[{"source":"PDF p.8 IV-D","value":"2.7M"},{"source":"PDF p.10 Table II","value":"2.4M"}],"resolution":"Unknown; do not silently select one"},
+    {"item":"Large-sample split arithmetic","source":"PDF p.9 Section V","analysis":"20% of 4e8 is 8e7; clarify whether quoted budget means total or training data"},
+    {"item":"364700 parameter description","locations":["PDF p.1 abstract calls it uncompressed representation","PDF p.11 Table III identifies CP model"],"resolution":"Clarify factorized baseline versus explicit full tensor"}
+  ],
+  "author_acknowledged_limitations": [
+    {"source":"PDF p.13 V-D","description":"Larger device population would further strengthen conclusions"}
+  ],
+  "supplements_available": false,
+  "experiments_run_in_this_analysis": false
+}

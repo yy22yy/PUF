@@ -1,0 +1,183 @@
+[
+  {
+    "topic": "TT核、边界及存储",
+    "kind": "source_fact",
+    "textbook_pdf_pages": [
+      159,
+      162,
+      163
+    ],
+    "paper_pdf_pages": [
+      6,
+      7,
+      8
+    ]
+  },
+  {
+    "topic": "Tucker多线性秩",
+    "kind": "source_fact",
+    "textbook_pdf_pages": [
+      110,
+      112
+    ]
+  },
+  {
+    "topic": "CP秩定义",
+    "kind": "source_fact",
+    "textbook_pdf_pages": [
+      176,
+      177,
+      178,
+      291
+    ]
+  },
+  {
+    "topic": "连续分割左右段乘积",
+    "kind": "textbook_based_derivation",
+    "textbook_pdf_pages": [
+      167,
+      171
+    ]
+  },
+  {
+    "topic": "连接维数与最小精确秩区别",
+    "kind": "textbook_based_derivation",
+    "textbook_pdf_pages": [
+      162,
+      167,
+      171
+    ]
+  },
+  {
+    "topic": "128-bit7-XOR配置、维数和参数量",
+    "kind": "source_fact_and_arithmetic",
+    "paper_pdf_pages": [
+      7,
+      8,
+      11
+    ]
+  },
+  {
+    "topic": "20M CRPs、6.61小时、97.29%",
+    "kind": "source_fact",
+    "paper_pdf_pages": [
+      10
+    ]
+  },
+  {
+    "topic": "权重分块及中间四模块",
+    "kind": "new_derivation",
+    "assumptions": [
+      "论文所定义独立TT核",
+      "给定连接维数"
+    ]
+  },
+  {
+    "topic": "重复输入、模置换与不可辨识性",
+    "kind": "new_derivation",
+    "paper_pdf_pages": [
+      7
+    ],
+    "assumptions": [
+      "同一个z用于各模",
+      "比较TT内积评分"
+    ]
+  },
+  {
+    "topic": "理想外积秩1",
+    "kind": "paper_based_derivation",
+    "paper_pdf_pages": [
+      3,
+      7
+    ],
+    "assumptions": [
+      "理想线性延迟乘积",
+      "非零因子"
+    ]
+  },
+  {
+    "topic": "线性扩维保留理想表示",
+    "kind": "conditional_derivation",
+    "paper_pdf_pages": [
+      7
+    ],
+    "assumptions": [
+      "固定线性映射",
+      "各权重位于转置映射值域"
+    ]
+  },
+  {
+    "topic": "局部可分离和的秩上界",
+    "kind": "conditional_derivation",
+    "assumptions": [
+      "中间模块L项和",
+      "外部共享可分离向量"
+    ]
+  },
+  {
+    "topic": "恰需7的正交外积构造",
+    "kind": "teaching_construction",
+    "not_paper_evidence": true
+  },
+  {
+    "topic": "SVD最佳近似与谱尾",
+    "kind": "source_theorem_and_application",
+    "textbook_pdf_pages": [
+      367
+    ]
+  },
+  {
+    "topic": "TT-SVD局部误差与容限",
+    "kind": "source_theorem",
+    "textbook_pdf_pages": [
+      167,
+      170
+    ]
+  },
+  {
+    "topic": "TT-SVD准最优系数",
+    "kind": "source_theorem",
+    "textbook_pdf_pages": [
+      170,
+      171
+    ]
+  },
+  {
+    "topic": "四阶模块误差界",
+    "kind": "conditional_derivation",
+    "textbook_pdf_pages": [
+      170,
+      171
+    ],
+    "assumptions": [
+      "固定外部因子",
+      "已知模块",
+      "模块TT-SVD"
+    ]
+  },
+  {
+    "topic": "评分扰动与分类间隔",
+    "kind": "conditional_derivation",
+    "textbook_pdf_pages": [
+      341
+    ],
+    "assumptions": [
+      "相同特征",
+      "相同偏置与尺度",
+      "有界输入用于概率界"
+    ]
+  },
+  {
+    "topic": "训练与消融证据边界",
+    "kind": "source_audit",
+    "paper_pdf_pages": [
+      9,
+      10
+    ]
+  },
+  {
+    "topic": "泛化和具体7的最优性",
+    "kind": "unresolved",
+    "reason": "无所需谱、物理结构或学习保证；不由已有准确率反推"
+  }
+]

@@ -1,0 +1,97 @@
+{
+  "status": "passed_static_checks_with_documented_format_exemptions",
+  "artifact": "tt-rank-choice-analysis.md",
+  "sha256": "c54ec03f9a6a31a759c28920d12f3fa11af4a92ca995e2c996e0f4391c2149c8",
+  "display_formula_count": 56,
+  "source_claim_groups": 20,
+  "checks_passed": [
+    "展示公式独立定界及配对",
+    "TeX花括号和环境配对",
+    "left/right与范数定界符配对",
+    "无HTML锚点及表格内公式",
+    "控制字符与命令拼接检查",
+    "七核尺寸与八项秩向量核对",
+    "五组配置参数量精确算术复核"
+  ],
+  "raw_reader_validation": {
+    "ready": false,
+    "strict": true,
+    "summary": {
+      "fail": 1,
+      "warn": 1
+    },
+    "findings": [
+      {
+        "severity": "FAIL",
+        "code": "MISSING_EQUATION_ANCHORS",
+        "message": "Display equations exist, but paper.md has no E... anchors.",
+        "line": null
+      },
+      {
+        "severity": "WARN",
+        "code": "MISSING_EQUATION_INDEX",
+        "message": "Three or more display equations require an equation index.",
+        "line": null
+      }
+    ]
+  },
+  "format_exemptions": [
+    {
+      "codes": [
+        "MISSING_EQUATION_ANCHORS",
+        "MISSING_EQUATION_INDEX"
+      ],
+      "reason": "用户明确要求Typora兼容、去掉HTML锚点与人工公式索引；本文为专题理论分析，出处在正文及来源记录中保留"
+    }
+  ],
+  "source_pdf_pages_read_this_run": {
+    "paper": [
+      3,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "textbook": [
+      109,
+      110,
+      112,
+      159,
+      162,
+      167,
+      170,
+      171,
+      176,
+      177,
+      178,
+      179,
+      291,
+      367
+    ]
+  },
+  "proof_review": [
+    "核3至6形成四阶模块；核1、2、7为独立外部向量；未把核4、5误当全部复杂模块",
+    "最小精确秩等式限定非零张量和固定模顺序；架构连接维数仅为秩上界",
+    "非均匀秩不具备一般的七项全局CP和的表示保证；必须保留外部共享因子条件",
+    "中间秩不能补偿外部秩1切分的谱尾；各切分下界不能无条件相加",
+    "原分割矩阵的最佳近似与TT-SVD当前余项的局部谱尾分开陈述",
+    "根号6界限限定七阶已知权重TT-SVD；根号3界限限定固定外部因子的四阶模块",
+    "同一z重复输入导致模置换评分不变；未赋予中间位置未经证实的物理意义",
+    "评分分歧界不等同带噪标签测试错误率；输出偏置、尺度条件明确",
+    "正交外积构造是纯数学存在性证明，不是数据发现或选7的物理证据",
+    "未从参数量推出泛化、优化收敛或7的最优性；选择历史保持未知"
+  ],
+  "no_training_or_parameter_search_or_numerical_experiments": true,
+  "typora_visual_preview_performed": false,
+  "math_renderer_compilation_performed": false,
+  "browser_opened": false,
+  "local_links_checked": [
+    "/Users/across/Desktop/PUF/paper_analysis_20261022/source.pdf",
+    "/Users/across/Desktop/pre-summer-paper/papers/PUF/tensor_textbook.pdf",
+    "/Users/across/Desktop/PUF/paper_analysis_20261022/tt-rank-theory.md",
+    "/Users/across/Desktop/PUF/paper_analysis_20261022/paper-card.md",
+    "/Users/across/Desktop/PUF/paper_analysis_20261022/work/tt-rank-choice-review.json"
+  ]
+}

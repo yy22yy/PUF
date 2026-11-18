@@ -1,0 +1,22 @@
+{
+  "ready": false,
+  "strict": true,
+  "summary": {
+    "fail": 1,
+    "warn": 1
+  },
+  "findings": [
+    {
+      "severity": "FAIL",
+      "code": "MISSING_EQUATION_ANCHORS",
+      "message": "Display equations exist, but paper.md has no E... anchors.",
+      "line": null
+    },
+    {
+      "severity": "WARN",
+      "code": "MISSING_EQUATION_INDEX",
+      "message": "Three or more display equations require an equation index.",
+      "line": null
+    }
+  ]
+}

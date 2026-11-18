@@ -1,0 +1,19 @@
+{
+  "status": "passed",
+  "artifact": "tt-rank-theory.md",
+  "display_formulas": 54,
+  "source_claim_groups": 16,
+  "local_links_checked": 3,
+  "broken_links": [],
+  "raw_html_anchors": 0,
+  "math_in_tables": 0,
+  "checks": [
+    "display delimiters",
+    "TeX grouping",
+    "paired left/right delimiters",
+    "local source existence",
+    "page-number ranges"
+  ],
+  "typora_visual_preview_performed": false,
+  "training_or_numerical_experiments_performed": false
+}

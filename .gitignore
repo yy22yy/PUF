@@ -1,10 +1,21 @@
+# 虚拟环境（三个：.venv / .venv-torch / .venv-tensorflow，见 README）
 .venv/
 .venv-*/
-runs/
+
+# 实验产物：只提交契约说明，运行结果留在本地
+runs/*
+!runs/README.md
+
+# 一次性运行目录与缓存
 __pycache__/
+**/__pycache__/
 *.py[cod]
-.DS_Store
 .pytest_cache/
 *.egg-info/
 dist/
 build/
+
+# 随系统生成的杂项
+.DS_Store
+**/.DS_Store
+.ipynb_checkpoints/

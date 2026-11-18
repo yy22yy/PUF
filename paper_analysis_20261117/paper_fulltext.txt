@@ -1,0 +1,1097 @@
+
+===== PAGE 1 =====
+1
+Neural Network Modeling Attacks on
+Arbiter-PUF-Based Designs
+Nils Wisiol∗o, Bipana Thapaliya†o , Khalid T. Mursi‡, Jean-Pierre Seifert§ and Yu Zhuang¶
+∗§Technische Universita¨t Berlin
+†¶Department of Computer Science, Texas Tech University, Lubbock, TX 79409, USA
+‡Department of Cybersecurity, College of Computer Science and Engineering, University of Jeddah, Jeddah,
+Saudi Arabia
+Email: ∗nils.wisiol@tu-berlin.de, †bipana.thapaliya@ttu.edu, ‡kmursi@uj.edu.sa, §jean-pierre.seifert@tu-berlin.de,
+¶yu.zhuang@ttu.edu
+Abstract—By revisiting, improving, and extending recent While such PUF-based, secret-free cryptography is by
+neural-network based modeling attacks on XOR Arbiter PUFs definition immune against attacks that recover any secret key,
+from the literature, we show that XOR Arbiter PUFs, (XOR)
+adversaries may be able to study the individual behavior of
+Feed-ForwardArbiterPUFs,andInterposePUFscanbeattacked
+a PUF token and extrapolate it using a mathematical model,
+faster, up to larger security parameters, and with an order
+of magnitude fewer challenge-response pairs than previously in which case it is impossible for a remotely connected
+known both in simulation and in silicon data. To support our party to tell the original PUF token and mathematical model
+claim, we discuss the differences and similarities of recently apart. If such modeling attacks succeed, the security of most
+proposed modeling attacks and offer a fair comparison of the
+applications would collapse, just like in the case of a leaked
+performance of these attacks by implementing all of them using
+secret key. (Note that, on the other hand, inability to model a
+the popular machine learning framework Keras and comparing
+their performance against the well-studied Logistic Regression PUF successfully does not by itself guarantee its security.)
+attack. Our findings show that neural-network-based modeling An important tool to launch modeling attacks is machine
+attacks have the potential to outperform traditional modeling learning,ahighlyparameterizedapproachtocreatepredictions
+attacks on PUFs and must hence become part of the standard
+from observed data by using specialized algorithms. In the
+toolboxforPUFsecurityanalysis;thecodeanddiscussioninthis
+past two decades, machine learning has emerged as the tool
+papercanserveasabasisfortheextensionofourresultstoPUF
+designs beyond the scope of this work. of choice for the security analysis of PUFs [11], [21], where
+an attacker attempts to create a model of a PUF token
+Index Terms—Physical Unclonable Function, Strong PUFs,
+which, if successful, can be used to predict PUF responses
+Machine Learning, Modeling Attacks, Arbiter PUF.
+with high accuracy. Studies on modeling attacks hence
+I. INTRODUCTION representanessentialpartofresearchonPUFsandsecret-free
+cryptography.Withthegrowingpopularityinbothscienceand
+In all cryptographic applications deployed today, what
+industryaswellastherapiddevelopmentofmachinelearning
+distinguishes the legitimate user from an adversary is the
+software frameworks such as Tensorflow/Keras or Torch, we
+knowledge of the secret keys, which are found anywhere
+expect this to remain the case for the foreseeable future.
+cryptography is used, including in computers of microscopic
+Traditionally, most machine-learning-based modeling
+scale embedded in digital door keys, credit cards, and
+attacks on strong PUFs have been based on the optimization
+passports. As cryptography became more ubiquitous, gaining
+of the parameters of a physically motivated model of the
+access to the secret key itself became an important attack
+strong PUF. More recently, this approach was complemented
+strategy, as the revealed secret key causes the security
+by a modeling attack methodology based on general models
+guarantees of the employed scheme to collapse.
+not derived from physical insights [34], [18], [3], [17], [23],
+Tomitigatesuchattacks,abranchofresearchonPhysically
+[32] and models that are extensions of a physical model [23].
+Unclonable Functions (PUFs) emerged [20], where the
+Generic models in this sense are no longer restricted to a
+difference of the legitimate user and adversary is not defined
+certain class of functions derived from physical inspiration,
+by knowledge, but by possession of a physical object. The
+but are able to model any Boolean function. Thus, such
+physical object, called PUF token, is assumed to exhibit
+attacks do not require exact modeling of the PUF under
+highly individual physical behavior when prompted with a
+attackand allowforrapidtestingofPUFdesignideas.While
+physical stimulus such as an electrical signal or laser beam.
+also generic models benefit from feature selection based on
+Further, it is assumed to be physically unclonable, meaning
+physical insights, using general neural networks such as
+thatitisinherentlyimpossibletoproducetwoidenticaltokens.
+the multilayer perceptron as an analysis tool for strong PUF
+The envisioned cryptography shall be based on this unique
+design has found some adoption, and is in particularly helpful
+responsebehaviorofeachindividualunclonabletokeninstead
+in the analysis of designs composed of several Arbiter PUFs.
+of classical secrets stored in memory.
+For example, in a recent modeling attack on the Interpose
+oNilsWisiolandBipanaThapaliyacontributedequallytothiswork. PUF by Wisiol et al. [32], the authors used such general
+
+===== PAGE 2 =====
+2
+models to demonstrate that also slight variations of the PUF give an overview on work that relates to modeling attacks
+under attack are not promising candidates for a secure strong on XOR Arbiter PUFs and modeling attacks using neural
+PUF. In another modeling attack study, Santikellur et al. [22] networks. In Sec. IV, we discuss and evaluate the Logistic
+use a multilayer perceptron approach to study the security of Regression attack as a baseline for comparison of attacks
+the MPUF, cMPUF, rMPUF, Lightweight Secure PUF, XOR in this work. In Sec. V, VI, and VII, we replicate and
+ArbiterPUF,andInterposePUF.TheauthorsoftheSCA-PUF extend neural-network-based attacks from the literature and
+[37] show that their proposed design is more resilient than an discuss design choices as well as attack performance, with a
+XOR Arbiter PUF with respect to attacks based on neural comparison of the XOR Arbiter PUF attacks given in Sec.
+networks. In the security analysis of their novel PUF design VIII. We apply our findings to the Interpose PUF in VII-D, to
+based on a subthreshold voltage divider array, Venkatesh et XOR Arbiter PUF silicon data in Sec. VII-E, and to the XOR
+al. [29] provide a failed modeling attack using a multilayer Feed-Forward Arbiter PUF in Sec. IX. We draw conclusions
+perceptron as evidence for the security of their proposal. and discuss future work in Sec. X.
+The quick advancement and rising popularity in modeling
+attacks based on neural networks raise questions regarding II. RELATEDWORK
+the significance of the results obtained using such general-
+The security analysis of PUFs is not limited to modeling
+purpose models. To estimate a PUF design’s security level, it
+attacks based on machine learning, and not limited to the
+is particularly important to know, first, how the data and time
+attacker model used in this work.
+complexity of general neural-network-based attacks relate to
+For XOR Arbiter PUF, the state-of-the-art attack operates
+more specialized physical-model-based attacks, second, how
+on information about the reliability with respect to a given
+the chances of success of these two types of attacks relate,
+challenge, i.e., on information about the probability that
+and, third, how the various hyperparameters of such attacks
+the PUF token will produce the same response when given
+need to be configured.
+the same challenge [5]. Given this information, the data
+In this work, we answer the above questions with respect complexity of the modeling of XOR Arbiter PUFs is
+to the Arbiter PUF and its variants, a family of electrical drastically reduced, even compared to the results of neural-
+PUF designs that is commonly used in PUF research as a network-based attacks in this work. Recently, Tobisch et al.
+baseline for comparison or as a building block for novel PUF demonstrated that this attack methodology can be extended to
+designs.Withthecontributionsofthiswork,otherresearchers other PUF designs and launched an attack on the Interpose
+areenabledtoconductsimilaranalysesforotherPUFdesigns. PUF [26]. Chatterjee et al. [7] used a reliability-based attack
+In more detail, our contributions are: to show that the security level of the S-PUF is drastically
+1) We show that XOR Arbiter PUFs can be attacked reduced within this attacker model.
+faster, up to larger security parameters, and with an Incontrasttotheseworks,therelatedworkbelowconsidera
+order of magnitude fewer challenge-response pairs than weakerattackermodelinwhichonlytheresponseinformation
+previously known by using generic neural networks, is considered.
+even if the implementation gives reliable responses. We Highly specialized attacks based on machine learning are
+thereby show that neural networks are an essential tool also an essential part of the security analysis of PUFs, as
+in PUF security analysis and refute statements to the demonstrated by Delvaux [8] in a collection of five attacks
+contrary of Nguyen et al. [19] made at CHES 2019. on PUFs with accompanying lightweight obfuscation logic.
+2) We show that our results reduce the data complexity This approach contrasts the generic models used in this work.
+of the Splitting Attack on the Interpose PUF and Another branch of security analysis of PUFs uses the
+enable attacks on the Feed-Forward Arbiter PUF, thus Probably Approximately Correct (PAC) framework [28],
+demonstratingthattheimprovedperformanceofneural- which is concerned with classes of functions for which an
+network-based attacks has implications beyond the asymptotically polynomial-time learning algorithm exists that
+security of the XOR Arbiter PUF itself. will yield a model of prescribed accuracy with prescribed
+3) We replicate three neural-network-based attacks and successrate.Incertaincases,thiscanbedonewithoutusinga
+the physical-model-based Logistic Regression attack on physicallyinspiredmodel[10],whichrelatestotheapplication
+XOR Arbiter PUF from the literature and provide an of generic neural networks in this work. Recently, a semi-
+exhaustive and fair comparison of their performances. automated approach for analysis was proposed [6].
+Weoverviewandsummarizeallfourattacks,discussing
+differences and similarities, and justify design choices. III. PRELIMINARIES
+4) We refute a recently claimed very low data complexity A. Additive Delay Model
+of XOR Arbiter PUF modeling attacks [17].
+Ann-bitk-XORArbiterPUF[11],[24],asdisplayedinFig.
+5) We provide a comprehensive, unified, and easy-to-use
+1, can be modeled using a Boolean function f :{−1,1}n →
+Python implementation of all attacks in this work under
+{−1,1}whichisparameterizedbyrealvaluesW ∈Rk×n and
+an open-source license at https://github.com/nils-wisiol/
+b∈Rk.Theresponsetoachallengec∈{−1,1}n isgivenby
+pypuf/tree/2021-mlp, integrated in the pypuf framework
+[31]. k
+(cid:89)
+f(c)=sgn ((cid:104)W ,x(cid:105)+b ).
+l l
+This paper is organized as follows. In the next section, we
+l=1
+
+===== PAGE 3 =====
+3
+In this setting, the feature vector x ∈ Rn is a function
+of the given challenge c defined by x =
+(cid:81)n
+c . The
+i j=i j
+parameterization W, called weights in this work, represents
+c =1 c c
+thephysicalintrinsicsofaparticularPUFtoken.Thismodelis 1 n−1 n
+(cid:76)
+f(c)
+commonly referred to as the additive delay model. A physical
+c =−1
+2
+motivation, derived from the intrinsic delay values of an
+Arbiter PUF circuit, can be found in full version [33].
+In the case of Arbiter PUFs, i.e., k =1, the additive delay
+model can be understood as a hyperplane in n dimensions,
+c =1 c c
+dividing the edges of the Boolean cube {−1,1}n (and, by 1 n−1 n
+extension, Rn) into two regions labeled by the -1 and 1 c =−1
+2
+responses of f. The boundary between the two regions is
+a linear, or in case of nonzero bias, affine subspace of Rn. Fig. 1. Schematic representation of a 2-XOR Arbiter PUF with n-bit
+In this sense, the model can be understood as linear. In an challengecandfinalresponsef(c).
+XOR Arbiter PUF, the decision boundary in Rn becomes
+more complex, hence adding XOR operations increases the
+wheref(1)(c),f(2)(c)areindependentevaluationsofthePUF
+nonlinearity of the model.
+token.
+This linearity of the Arbiter PUF model is also the
+Giventhisdefinition,wecanadjustthevarianceofthenoise
+motivation of using the feature map x =
+(cid:81)n
+c . Without
+i j=i j such that the reliability of our simulation reaches a certain
+it, the decision boundary cannot easily be represented as a
+value.
+hyperplane in Rn. This, however, is a prerequisite for the
+successful application of the Logistic Regression attack [21]
+(cf. Sec. IV). B. Attacker Model
+Most modeling attacks in this work are based on simulated The standard attacker model for PUFs is based on the
+challenge-response data, with the application of our attack to promise of increased hardware security of PUF tokens,
+silicondatagiveninSec.VII-E.Thereasonforthisistwofold. compared to the traditional approach of cryptographic
+First,securityanalysiswithafocusonthePUFdesignshould hardware extended by secure key storage. Hence, in the
+be done on ideal data, i.e., without regard to the properties standard PUF attacker model, the adversary gets physical
+of a specific implementation. This ideal data should follow access to the PUF token for some limited amount of time,
+the expected properties of implementations. In the case of allowingthemtocollectalargenumberofchallengeresponse
+the Arbiter PUF, as pointed out by Tobisch and Becker [27], pairs. (During that time, also hardware attacks are allowed,
+this means that different PUF tokens may have varying ML but not studied in this work.)
+resistance. Any implementation’s security should be studied Giventhisattackermodel,XORArbiterPUFsandInterpose
+separately in case the security analysis of the ideal primitive PUFs can be attacked using information that is exposed by
+ispromising.Second,whileFPGAimplementationsofArbiter the per-challenge reliability, which the attacker can recover
+PUFs suffer from known weaknesses, ASIC implementations by evaluating a challenge multiple times [5], [26].
+are expensive and are well known to behave very closely as In this work, however, we consider the weaker attacker
+predicted by the additive delay model [9], [25]. model used in the works that we replicate, where the passive
+Forthemodelingofnoise,werelyonthemodelbyDelvaux attacker only gets access to a large collection of uniformly
+et al. [9]. In this model, for each evaluation of the PUF, a random challenges and the corresponding responses of the
+Gaussian noise value with zero mean is added to the delay PUF. While this is, in general, an unjustified restriction of
+difference of the two delay lines in the Arbiter PUF. That is, the PUF attacker model, it is equivalent to a situation where
+the Arbiter PUF response is modeled as thereliabilityinformationofthePUFunderattackiseithernot
+available or not useful. This is the case in some PUF-based
+f(c)=sgn((cid:104)W,x(cid:105)+b+N),
+authentication protocols [16], [35], [36], and may be the case
+where N is chosen from a Gaussian distribution with zero for some novel PUF designs, as a weaker justifiable attacker
+mean and defined variance, W ∈ Rn and b ∈ R model model is desirable for the PUF designer. Thus, the passive
+the Arbiter PUF physical properties, and x ∈ {−1,1}n is attacker model serves an appropriate basis for our argument
+the feature vector corresponding to the given challenge c. that neural-network-based modeling attacks should become
+This model extends to k-XOR Arbiter PUFs by drawing k part of the standard security analysis of PUFs. Nevertheless,
+independent noise values. duetotherestrictedattackermodel,weemphasizethatafailed
+To measure how the noise influences the behavior of the modeling attack in this attacker model cannot by itself serve
+PUF, we define the reliability of the PUF as the expected as evidence for security.
+value over the challenge space that the PUF will return the
+same response when giventhe challengetwice inindependent
+C. Methodology
+evaluations,
+To provide a fair comparison of the properties of four
+(cid:104) (cid:105)
+reliability(f)=E f(1)(c)=f(2)(c) , different machine learning modeling attacks on XOR Arbiter
+c
+
+===== PAGE 4 =====
+4
+PUFs, in this work, we reimplemented these attacks using the A large-scale study of Tobisch and Becker [27] determined
+popularKerasframeworkandranallexperimentsonthesame training set sizes for the LR attack that yield optimal results,
+CPU. Also, our novel attacks on the Interpose PUF and Feed- i.e., have the lowest training times, and minimal training
+ForwardArbiterPUFsareusingthisframework.Astheattacks set sizes, for which the attack was observed to work at
+run, compared to previous works, relatively fast, we focus least once, which we confirmed and will use for comparison.
+our attention on the comparison of the data complexity, i.e., To provide for a fair comparison with the neural network
+how much training data is required to obtain good modeling attacks,wereimplementedtheLRattackintheKerasmachine
+predictions. learning framework. Differences in run time hence may not
+Inthiswork,wedonotfocusontheexactaccuracymetrics only be caused by the usage of different CPUs, but also by
+of prediction quality for several reasons. First, the attacks optimizationdifferencesintheimplementations.Nevertheless,
+that we study do not yield intermediate results when correctly weobtainthesamenumberofrequiredCRPs,whichindicates
+parameterized,i.e.,theattacksendeitherwithaccuracy50%or thatourimplementationbehavessimilartotheoneofTobisch
+close to 100%. Additionally, we observed that high-accuracy and Becker.
+resultscanbefurtherimprovedbylettingthetrainingcontinue To increase the training performance of the original LR
+for a few more epochs. Second, to impersonate a PUF token, algorithm, we modified some details. First, to reduce the
+no extremely high accuracy is needed, and any prediction number of epochs required for training, we introduced the
+accuracy significantly better than 50% should be considered usage of mini batches, where the network is updated with the
+a security weakness of the PUF design [8]. Hence, instead of gradient not only after evaluating the complete training data,
+prediction accuracy, we focus on the attack success rate, i.e., but several times in each epoch. This allows for convergence
+the proportion of independently run attacks on independent using fewer epochs, and thus (except in corner cases), for
+PUF simulations that yielded prediction accuracy greater shorter training time, but one must be careful to not choose
+than 90%. Given that virtually all successful attacks yielded the batch size too small. Too small batch sizes can lead to
+accuracy 95% or better and virtually all unsuccessful attacks noisy gradient values, which will in turn perform unhelpful
+yielded accuracy 55% or below, the success rate is very updates on the network.
+insensitive to the exact choice of this threshold. Nevertheless, Second, we use Adam optimizer [12] instead of the
+for the sake of completeness, the prediction accuracy of originally used resilient backpropagation, as the latter works
+obtained models is given as the average over several attacks poorly together with the use of mini batches.
+on different PUF tokens. Third, we apply the tanh activation function to each of the
+Toensurethatallofourresultsarereproducibleindetail,we k delay values computed by the respective arbiter chains, i.e.
+seed all involved pseudorandom number generators used for we change the model function from
+generating PUF token simulations, initializations of machine
+learning models, etc. with defined values. (cid:32) k (cid:33)
+(cid:89)
+f (c)=tanh ((cid:104)W ,x(cid:105)+b ) to
+LR l l
+IV. BASELINE:IMPROVEDLOGISTICREGRESSION l=1 (1)
+ATTACK (cid:32)
+(cid:89)
+k (cid:33)
+f(cid:48) (c)=tanh tanh((cid:104)W ,x(cid:105)+b ) .
+In this work, we compare three neural network modeling LR l l
+attacks against the commonly used Logistic Regression (LR) l=1
+attackby Ru¨hrmairet al.[21]onXOR ArbiterPUFs.The LR This change was motivated by the observation that in the
+attack has become an important tool for the security analysis traditional LR network, a single arbiter chain can have large
+ofdelay-basedPUFsandisusedinalargenumberofdifferent influence on the absolute value of the final output. However,
+works, including in the recent proposal of the Interpose PUF in the electrical circuit, no analogue to the absolute value
+[19] and an attack on it [32]. In this work, we use our Keras exists.Instead,XORArbiterPUFmodelweightscanbescaled
+implementation of the LR attack with a few modifications usingpositivescalarswithoutaffectingthecomputedfunction.
+detailedbelowasthebaselineforcomparisonofXORArbiter We speculate that different influences can hamper the training
+PUF attacks. process, as weight updates during backpropagation may be
+The LR attack is based on a physical model of the applied predominantly to influential arbiter chains. Applying
+Arbiter PUF, which can be represented as a hyperplane in the tanh function ensures a more equalized influence of all
+n-dimensional space by converting a given challenge into an arbiterchainsonthefinaloutput,asfactorvaluesarebounded
+appropriately chosen feature vector. A physical motivation for by an absolute value of 1.
+thefeaturevectorusedinthisandpreviousworkscanbefound By the introduction of the additional tanh activation
+in the full version of this paper [33]; if the Arbiter PUF uses function, our attack does not fulfill the definition of logistic
+any logic to transform the challenge before applying it to the regressionanymore1.Inaslightabuseofterminology,wewill
+delay paths, this needs to be taken into consideration as well. refer to this version as the improved LR attack. A sketch of
+This Arbiter PUF model was extended to the XOR Arbiter thenetworkstructureusedintheattackisdisplayedinthefull
+PUF using the observation that the XOR operation can be version of this paper [33].
+writteninadifferentiablewaybyrepresentingtheArbiterPUF
+response values by −1 and 1 and the XOR operation with the
+1OnecanarguethatalreadytheLRattackonXORArbiterPUFhardlyfits
+real product of these values. thetextbookdefinitionofalogisticregression.
+
+===== PAGE 5 =====
+5
+TABLEI V. TENSORREGRESSIONNETWORKATTACKBY
+EMPIRICALRESULTSONLEARNINGSIMULATEDXORARBITERPUFS SANTIKELLURETAL.
+OBTAINEDUSINGOURKERAS-BASEDIMPLEMENTATIONOFTHELR
+ATTACK.REFERENCEVALUESOFTOBISCHANDBECKER[27]USEUPTO To reduce the computational effort for modeling attacks on
+16CORES.((cid:63)RESULTOBTAINEDUSINGADIFFERENTNUMBEROFCRPS.)
+XOR Arbiter PUFs, Santikellur et al. [23] proposed to use an
+WEUSED4THREADSFORATTACKSWITHk≤8;40THREADSFORk≥9.
+THEATTACKSFORk=9ANDk=10USED132GIBAND197GIBOF efficientCP-DecompositionTensorRegressionNetwork(ECP-
+MEMORY,RESPECTIVELY. TRN),whichisparameterizedbyanintegerrankR.Tomodel
+an k-XOR n-bit Arbiter PUF, the proposed model computes
+success duration meansuccess the function
+k CRPs rate (threads) accuracy [27]
+(cid:34) R (cid:32) k (cid:33)(cid:35)
+4 30k 10/10 1min 95.5% 1min (cid:88) (cid:89)
+f(x)=sgn α · (cid:104)w ,x(cid:105)+b ,
+5 260k 10/10 4min 96.9% 1min i i,l i,l
+6 2M 20/20 1min 97.6% 1min i=1 l=1
+7 20M 10/10 3min 98.5% 55min
+8 150M 10/10 28min 96.4% 391min where w i,l ∈ Rn and b i,l ∈ R. A drawing of the network
+9 500M 7/10 14min 96.8% (cid:63)2266min structureisshowninthefullversionofthispaper[33].Dueto
+10 1B 6/10 41min 95.7% -
+the highly parallel structure of the network, the approach may
+benefit from performance improvements during training. The
+parameters to be trained are α , i∈{1,...,R} and w ,b ,
+i i,l i,l
+l∈{1,...,k},i∈{1,...,R}.Hence,therearenkR+kR+R
+Using our Keras-based implementation together with these trainable parameters.
+improvements, we could increase the performance of the LR Giventhisnetworkstructure,thenetworkcanbeunderstood
+algorithm (with respect to wall clock time, i.e., elapsed real- as an approach that trains R XOR Arbiter PUF models in
+time from beginning to end of the model training procedure), parallel. The final response of the model is then computed as
+which is summarized in Tab. I. We found that the largest theweightedsumoftheRmodeloutputs,thenthesignofthe
+proportion of the performance gain is due to Keras, which responseisreturned.Afterthetrainingcompletes,thenetwork
+allows for optimized and highly parallel computing, and to a isfilledwithRsetsofXORArbiterPUFweights,whichraises
+smaller extent due to our improvements. In a comparison of the question how the individual prediction accuracy differs
+attack performance on 64-bit 5-XOR Arbiter PUFs, we found from the overall prediction accuracy reported by Santikellur
+that our implementation of the original LR attack achieved et al.
+a success rate of 16/20, while the improved version yielded For our experiments operating on simulations of 4, 5, and
+18/20successful,withallotherparametersbeingequal.Wedid 6-XOR Arbiter PUFs with 64-bit challenge lengths, we found
+not study in more detail the performance of the two versions that in all successfully trained networks, exactly one of the
+depending on the choice of mini batch size, number of CRPs, R trainedmodelsshowedhighcorrelationwiththesimulation
+learning rate, etc, as the neural-network attacks presented in weights, whereas the other R − 1 had no correlation. This
+this work outperform the LR attack by an order of magnitude findingwasconfirmedbythepredictionaccuracy:R−1ofthe
+in data complexity. We thus performed such analysis on the models in the successfully trained network had an individual
+neural-network attack (Fig. 2). prediction accuracy of around 50%, whereas exactly one had
+high prediction accuracy. Using the single model allowed for
+Similar to the attacks based on neural networks shown
+even higher prediction accuracy than using the fully trained
+below, performance of the improved LR attack crucially
+network, as the noise of the R−1 low-correlation models is
+depends on the choice of hyperparameters, in particular on a
+removed.Consideringthatthereishardlyanyimprovementin
+goodcombinationoflearningrateandbatchsize.Thenumber
+loss when more than one model predicts the correct answer,
+of required epochs is also heavily influenced by any early
+wecanconcludethattheR-rankmodeloftheECP-TRNdoes
+stopping logic, which may depend on the validation accuracy
+not provide benefits over the 1-rank model.
+or loss. We thus expect that the wall-clock performance and
+AsthefinalresponseoftheECP-TRNnetworkiscomputed
+thenumberofrequiredepochscanbefurtherreduced,e.g.,by
+as the weighed sum of the R individual model responses,
+using a systematic approach to find optimal hyperparameters.
+the individual models influence each others training process
+On the other hand, we expect that for the LR attack, the data
+through the backpropagation algorithm. To examine if this
+complexitycannotsignificantlybereducedbyhyperparameter
+interdependency during training provides an advantage to the
+tuning, as our results are in-line with previous research on the
+modelingattack,werunmanyattackattemptsonasinglePUF
+LR attack [21], [27], [30], [32].
+underattack,i.e.,werestartthetrainingprocesswithdifferent
+Our numbers confirm once more [21], [32] that the LR initializationsofthemodel,whilekeepingthePUFsimulation
+attackrequiresanumberofCRPsinthetrainingsetthatgrows andCRPsetconstant.Inthecaseofmanyattackattempts,the
+exponentiallywiththenumberofemployedXORsinthetarget trainingofeachattemptisindependentofthetrainingprocess
+XORArbiterPUF.InFig4,weshowtherequiredtrainingset of the other attempts, above-mentioned interdependency is
+size. Based on a fitted function k (cid:55)→ α·ek using the least removed. This allows us to compare the performance metrics
+squares method, we predict the number of required CRPs for of rank R ECP-TRN attacks using a single attack attempt
+k =10is1.3billion,fork =11is3.6billion,andfork =12 versus rank 1 ECP-TRN using R attack attempts. The results
+is 1012. are displayed in Tab. II.
+
+===== PAGE 6 =====
+6
+TABLEII TABLEIII
+COMPARINGSINGLE-ATTEMPTATTACKSUSINGRANKRECP-TRN EXTENDEDRESULTSONLEARNINGSIMULATEDXORARBITERPUFS
+VERSUSR-ATTEMPTATTACKSUSINGRANK1ECP-TRNON64-BITXOR OBTAINEDUSINGOURKERAS-BASEDIMPLEMENTATIONOFTHE
+ARBITERPUFS.OURRESULTSINDICATETHATTHETRAININGOFTHE MULTILAYERPERCEPTRONATTACKBYASEERIETAL.[3].MEMORY
+ECP-TRNDOESNOTBENEFITFROMINTERACTIONOFTHEMODELS;BUT USEDBYOURIMPLEMENTATIONISPROPORTIONALTOTHENUMBEROF
+GIVESSOMEINDICATIONTOTHECONTRARY.COMPAREDTOTHEFIGURES CRPS,WITHTHELARGESTATTACKREQUIRING50GIBFOR100MCRPS
+OFSANTIKELLURETAL.[23],FORk=5ANDk=6,WETRIPLEDAND WHENn=128.(cid:63)TOALLOWFORCOMPARISONWITHTHEORIGINAL
+DOUBLEDTHENUMBEROFCRPS,RESPECTIVELY,TOOBTAINANY FIGURES,WECOMPUTEDANAPPROXIMATIONOFTHEDURATIONUSINGA
+SUCCESSFULRESULTS. SINGLECORE.THEPERFORMANCELOSSISCAUSEDBYTHELOWER
+SINGLE-COREPERFORMANCEOFOURCPUS(INTELXEONE5-2630V4)
+attempts total run meanattempt COMPAREDTOASEERIETAL.’S(INTELCOREI7).ALLOFOUR
+k CRPs R perrun runs successrate successacc. EXPERIMENTSUSEUPTO40THREADS;ASEERIETAL.USEDONLYONE.
+4 40k 1 5 10 100% 95.2%
+success duration success duration[3]
+4 40k 5 1 10 100% 94.6%
+n k CRPs rate (40threads) accuracy (1thread)
+5 320k 1 10 10 90% 94.9%
+64 4 400k 10/10 <1min 96.8% <1min
+5 320k 10 1 10 90% 94.9%
+64 5 400k 10/10 <1min 96.7% <1min
+6 800k 1 10 10 80% 95.1% 64 6 2M 9/10 <1min 97.3% 7min
+6 800k 10 1 10 80% 95.0% 64 7 5M 9/10 <1min 97.3% 12min
+64 8 30M 10/10 3min 98.1% 23min
+7 800k 1 100 5 20% 95.4%
+64 9 80M 9/10 86min 98.2% -
+7 800k 1000 1 4 0% —
+128 4 400k 10/10 <1min 96.8% 1min
+128 5 3M 10/10 <1min 97.1% 5min
+128 6 20M 10/10 <1min 98.0% 19min
+In none of the cases that we studied, we found that the
+128 7 40M 10/10 5min 97.9% 90min
+training of a rank R ECP-TRN did not surpass the success 128 8 100M 1/10 45min 98.6% -
+rate of just running R independent learning attempts using a
+rank 1 ECP-TRN.
+Unfortunately, we were not able to replicate the ECP- attackwasnotpubliclyavailableyet.Consequently,theattack
+TRN results of Santikellur et al. [23] exactly as published was not sufficiently considered in the security analysis of
+in the original paper. While the 64-bit 4-XOR case could the Interpose PUF [19]. We take this as evidence that the
+be replicated, our experiments for 5-XOR and 6-XOR publication of code that is the basis for claimed attack results
+requiredsignificantlymoreCRPsforreliableconvergencethan should be strongly encouraged by the community.
+originallyclaimed.For7-XORandlarger,wefailedtoachieve The original implementation of this attack was done using
+anysuccessusingtheproposedhigh-rankmodel.Adiscussion scikit learn. As part of our comparison of neural network
+with the original authors also could not improve our results. attacks, in this work, we reimplemented the network used
+WesuspectthatthereasonforthelargerrequirementofCRPs by Aseeri et al. using the Keras machine learning framework
+is either caused by the different behavior of Keras internals and were able to replicate all of their results. An overview
+compared to the original Tensorflow v1 implementation, of our replicated results can be found in Tab. III, including
+or, considered more likely, by some differences in CRP an extension to the 64-bit 9-XOR and 128-bit 8-XOR cases.
+generation. It may also play a role that by training R models Whiletheoriginalfiguresstrictlyusesingle-coreperformance
+inparallel,theoriginalauthorseffectivelyreportthemaximum on a consumer CPU, we used up to 40 cores in parallel.
+accuracy among (a large number of) R learning attempts, To allow for comparison, we include an estimation of the
+while our work reports data complexities for success rates single-coreperformanceofourimplementationbymultiplying
+mostly close to 100%. We further discuss this in Sec. VIII the measured wall clock time with the maximal number of
+and X. threads our experiment allowed. This overestimates the time
+required by our attack, especially for cases where multi-
+VI. MULTILAYERPERCEPTRONATTACKBYASEERIETAL. threadingallowsonlyforlittlespeedup,i.e.,forsmalltraining
+After an attack on 3-XOR 64-bit Arbiter PUFs by Yashiro sets.
+et al. [34] using a neural network with autoencoders and an Aseeri et al. did not include arguments for the specific
+attack by Alkatheriri et al. [2] on Feed-Forward Arbiter PUFs hyperparameter settings they used in their attack. We include
+using a multilayer perceptron, Aseeri et al. [3] were the first a discussion of the multilayer perceptron hyperparameters in
+ones to attack XOR Arbiter PUFs with more than four arbiter Sec. VII. A comparing overview can be found in Tab. V; a
+chains using neural networks. drawingofthenetworkcanbefoundinthefullversionofthe
+While much of their work focused on the fact that their paper [33].
+version of the modeling attack can be run on a regular laptop
+computer, i.e., on a machine without GPU, but with limited
+VII. MULTILAYERPERCEPTRONATTACKBYMURSIET
+memory and just using a single core of a consumer CPU,
+AL.
+their attack also achieves a significant reduction in both time
+A. Neural Network
+and data complexity, compared to the then state-of-the-art LR
+attack by Tobisch and Becker [27]. In follow-up work to Aseeri et al. [3] and Santikellur et al.
+Some attempts to replicate the work of Aseeri et al. failed, [22] (not to be confused with the ECP-TRN model), Mursi et
+[22], likely because at the time, the source code of the al.[17]presentedanenhancementofthemultilayerperceptron
+
+===== PAGE 7 =====
+7
+XORArbiterPUFmodelingattack,claimingtoreducethedata equivalent approach of using weights instead of delays. We
+and time complexity of XOR Arbiter PUF modeling attack found that while the attack performance reported by Mursi et
+by several orders of magnitude. We refute their empirical al. significantly benefited from the faulty CRP generation, the
+results, but show that their attack still requires fewer CRPs results obtained on valid CRPs still improve on the LR attack
+thanotherresponse-basedXORArbiterPUFmodelingattacks. in terms of data complexity by an order of magnitude, with
+Consequently, we are able to demonstrate that XOR Arbiter increasing advantage for an increasing number of XORs, cf.
+PUFs can be attacked up to higher security parameters than Fig.4.Wealsoobservedanimprovementinruntime.Detailed
+previously known, posing a challenge to implementors who results are reported in Tab. IV.
+needtokeepthenoiselowenoughtoallowforthefabrication For challenge lengths 128 and 256, we found that the data
+of XOR Arbiter PUFs with such large security parameters. complexitygrowsfastwiththenumberofXORs.Nevertheless,
+To attack a n-bit k-XOR Arbiter PUF, Mursi et al. propose for 128 bit challenges, it remains below the figures that
+to use a neural network that consists of three fully connected Tobisch and Becker [27] reported for the LR attack; for 256
+hidden layers of sizes 2k−1,2k,2k−1. We depict such a bit challenges we could not find numbers in the literature
+networkinthefullversionofthispaper[33].Byitsdesign,this to compare to. However, the LR attack is known to have
+modelusesfewertrainableparametersthantheMLP-approach polynomially increasing data complexity in the challenge
+by Aseeri et al. and the high-rank approach by Santikellur et length [32]. The steeply increasing required number of CRPs
+al., which can benefit training. Nevertheless, it uses orders of of the MLP attack could be caused by an inherent effect
+magnitudemoreparametersthanthetraditionalLRattack.For of the XOR Arbiter PUF structure, or by a mismatch of
+example,intheattackofa64-bit9-XORArbiterPUF,LRuses hyperparameters or neural network structure on the model.
+585trainableparameters,whiletheMLPattackinthissection Consideringeverything,weconcludethatthereisnoevidence
+uses 66,560. thatincreasingthechallengelengthwillbeaneffectivedefense
+Mursi et al. also use the tanh activation function for the against modeling attacks and let this question open to be
+hidden layers, compared to the usage of ReLU by Aseeri et studied in case sufficiently large XOR Arbiter PUFs can be
+al. This is beneficial to the learning process as the inputs to built.
+thenextlayerarenormalized,i.e.havezeromean[14].While In light of the reduced data complexity, we come to the
+Santikelluretal.[22]arguethattanhsuffersfromthevanishing conclusion that a model with far more trainable parameters
+gradientproblem,thesuccessfuluseoftanhintheMLPattack is able to outperform a model with fewer model parameters,
+canbeexplainedbytherelativelyshallowthree-layerstructure which falsifies the claim by Nguyen et al. that the LR attack
+of the neural network, which makes the vanishing gradient is the best performing among the XOR Arbiter PUF attacks
+problem unlikely to appear [17]. A detailed comparison of [19].
+hyperparameters as used in the different attacks showed in BythedetailedcomparisonoftheattacksrunbyMursietal.
+this paper can be found in Tab. V. with our results, we can identify the faulty CRP generation as
+the sole cause for the different data complexity of the attack.
+Hence,asabyproductofourreplicationoftheattack,wefind
+B. Replication and Results
+that a relatively small proportion of zero-valued delays in the
+To make the various neural-network-based attacks XOR Arbiter PUF can lead to a large loss of data complexity
+comparable, we reimplemented the attack by Mursi et al. for the modeling attack. With this in mind, implementors of
+using the Keras machine learning framework and found that PUFs should treat any significant deviation from simulation-
+their results could not be replicated. The difference in attack basedattackresultsonreal-worlddatawithadditionalscrutiny
+performance of our implementation and the original could be on the validity of their implementation. In future security
+traced back to a bug in the CRP generator used by Mursi analysesofPUFs,thedetailedvalidityofthesimulationinuse
+et al., which was based on a simulation of the delays. For needs to be established, otherwise the analysis could over- or
+each PUF instance, 4n delays were supposed to be drawn underestimatethePUF’ssecurity.Suchvalidationisespecially
+independently from a Gaussian distribution with mean 300 challenging when using generic models such as the MLP for
+and variance 40; given a challenge, the delay difference can modelingattacks.However,incaseoftheArbiterPUF,several
+then be computed and converted into the PUF response. Due independent results confirming the validity of the additive
+to the bug, which we discovered during our independent delay model exist [11], [25], [9].
+replication of the results using pypuf [31], about 20% of the
+randomly drawn delays were inadvertently set to zero. This
+C. Hyperparameter Optimization
+was difficult to notice from the CRP data, as the bias was
+hardly influenced and the MLP-based attack does not recover As a technical note, we found it difficult to configure
+the simulation delays or weights, but a neural network that is the hyperparameters of the attack by Mursi et al. While
+hard to be interpreted. the processing of the training data in mini batches provides
+To study the attack by Mursi et al., we use our benefits regarding the run time, and thus the development
+reimplementation of the neural network attack and the pypuf of the attack, it also requires to adjust the learning rate
+CRP generator [31] used throughout this work and in a appropriately. In Fig. 2 we report the success rate of MLP-
+recent LR-based attack on the Interpose PUF [32]. The basedattackson 8-XOR64-bitforalargevarietyofdifferent
+CRP generation is, for performance reasons, based on the configurations of learning rate and batch size, showing that
+
+===== PAGE 8 =====
+8
+onlyanappropriatecombinationofthosetwohyperparameters
+will yield a successful attack. We speculate that on the one
+hand, for high learning rates on small batches, the gradient
+direction is too noisy to yield a meaningful update to the
+model, and on the other hand, that for low learning rates
+on large batches the learning process runs into the maximum
+number of epochs before a convergence could be achieved.
+D. Noise Resilience and Application to the Splitting Attack
+During our experiments, we found the attack to work in
+the presence of noise without significant changes in data
+complexity when compared to the noise-free case. This is
+surprising, as the MLP attack, in contrast to the LR attack,
+is not restricted to functions of a certain class. Nevertheless,
+thetrainingconvergestothedesiredXORArbiterPUFmodel
+and approaches the maximum predictive power. We report
+detailed results on the noise resilience in Tab. IV.
+We also report that the MLP-based attack can be used
+as a drop-in replacement of the LR attack in the Splitting
+AttackontheInterposePUF[19],[32].Wefoundthat,similar
+to the results we obtained on XOR Arbiter PUFs, the data
+complexityoftheSplittingAttackcanbesignificantlyreduced.
+Experiments using our MLP-based implementation of the
+splitting attack showed that a 64-bit (1,7)-Interpose PUF
+can be modeled with 6 million CRPs in minutes, compared
+to 20 million CPRs and 20 hours required by the original
+implementation. A 64-bit (1,8)-Interpose PUF was modeled
+using our MLP attack in less than one hour using 18 million
+CRPs (i.e., with data complexity less than previously reported
+for the (1,7) case).
+In the splitting attack on the Interpose PUF, essentially
+two XOR Arbiter PUFs are attacked. First, the attack on the
+lower layer uses all available CRP data, then the attack on
+the upper layer of the Interpose PUF can only use about one
+half of the available CRP data. Compared to the XOR Arbiter
+PUF,thisresultsineffectivelydoublingthedatacomplexityof
+the splitting attack for Interpose PUFs of size (x,x), and no
+increase in data complexity for designs (x,y) where x < y.
+WeextrapolateourattackresultsontheInterposePUF(above)
+and the XOR Arbiter PUF (Tab. IV) and conclude that the
+MLP attack is able to attack 64-bit (1,11) Interpose PUFs
+using 325M CRPs (Wisiol et al. [32] originally used 750M
+toattackthe(1,9)version),and650MCRPstoattacka64-bit
+(11,11)-InterposePUF.Whilethishastwoordersofmagnitude
+larger data complexity than the attacks by Tobisch et al. [26],
+the MLP attack provides better convergence rate and faster
+computation time.
+As the splitting attack relies on a training set in which one
+feature is chosen at random [32], these results demonstrate
+thattheMLP-basedattackis(tosomeextend)resilientagainst
+feature noise, which makes it suitable in a variety of different
+attack scenarios, such as when XOR Arbiter PUF attacks are
+usedasabuildingblockinmodelingattacksonPUFsthatare
+composed of XOR Arbiter PUFs. Our results on noisy XOR
+Arbiter PUFs demonstrate that the MLP attack is (to some
+extend) resilient against label noise.
+1000.0 2000.0 3000.0 4000.0 5000.0 6000.0 7000.0 8000.0 9000.0 100.0
+500
+1000
+3000
+5000
+7000
+9000
+20000
+learning rate
+ezis
+kcolb
+1.00
+0.75
+0.50
+0.25
+0.00
+Fig.2. Successratefortrainingan8-XORArbiterPUF,6MCRPs,withthe
+attack by Mursi et al. [17], with varying learning rates and block sizes. For
+eachcombination,10learningattemptswererun.
+TABLEIV
+EMPIRICALRESULTSONLEARNINGSIMULATEDn-BITk-XORARBITER
+PUFSOBTAINEDUSINGOURIMPROVEDIMPLEMENTATIONOFTHE
+NEURALNETWORKATTACKBYMURSIETAL.[17].THELEARNINGWAS
+CONFIGUREDTOSTOPATVALIDATIONACCURACY95%,THEVARIANCE
+OFADDEDNOISEWASCONFIGUREDSUCHTHATTHESIMULATION
+ACHIEVESTHEGIVENRELIABILITYVALUE.SUCCESSRATESARE10/10
+FORMOSTROWSSHOWN,OTHERWISEATLEAST7/10.(“—”INDICATES
+NOSUCCESSFULRUN)RUNTIMESAREGIVENINMINUTES.
+k CRPs time[min] success memory [17]
+(threads) acc. CRPs time
+fullyreliableresponses,n=64
+4 150k <1(40) 97.0% 1GiB
+5 200k <1(20) 97.3% 3GiB 42k <1
+6 2M <1(40) 97.5% 2GiB 255k 2
+7 4M <1(40) 97.5% 2GiB 680k 1
+8 6M 13(4) 95.5% 1.7M 5
+9 45M 16(40) 98.1% 14GiB 4.2M 9
+10 119M 291(40) 97.9% 41GiB
+11 325M 1898(40) 98.1% 104GiB
+fullyreliableresponses,n=128
+4 1M <1(40) 97.3% 1GiB
+5 1M <1(20) 97.4% 3GiB
+6 10M <1(20) 98.1% 5GiB
+7 30M 2(20) 98.2% 20GiB
+fullyreliableresponses,n=256
+4 6M 1(40) 97.7% 6GiB
+5 10M 2(20) 97.8% 10GiB
+6 30M —(20) — 30GiB
+85%reliability,n=64
+4 180k <1(4) 90.9% 1GiB
+5 150k <1(4) 91.2% 1GiB
+6 2M <1(4) 91.8% 1GiB
+7 4M 3(4) 91.6% 2GiB
+E. Application to Real-World Data
+ToconfirmthelowerdatacomplexityoftheMLPattackfor
+realistic challenge-response and noise data, we compare the
+improved LR attack and MLP attack on the (XOR) Arbiter
+PUF data sets provided by Mursi et al. [17] and Aghaie and
+Moradi [1].
+The data of Mursi et al. contains one instance of each
+an 64-bit k-XOR Arbiter PUF for k ∈ {4,...,9}, queried
+on the same set of 1 million (for k ∈ {4,5,6}) and 5
+million challenges (for k ∈ {7,8,9}). This data set does
+not provide repeated measurements, hence no statement about
+the reliability can be made. Our statistical analysis of the
+
+===== PAGE 9 =====
+9
+0005 00001 k02 k05 k001 k002 k005 k099
+1.0
+0.5
+#CRPs
+ycarucca
+tset
+k=4
+00001 k02 k05 k001 k002 k005 k099
+k=5
+#CRPs
+k001 k002 k005 k0001 M2 *M5
+LR MLP
+k=7
+#CRPs
+(a)DatacollectedbyMursietal.[17].
+05 001 002 005 0001 0002 0005
+1.0
+0.5
+#CRPs
+ycarucca
+tset
+k=1
+005 0001 0002 0005 00001 k02 k05
+k=3
+#CRPs
+00001 k02 k05 k001 k002 k005 k099
+TABLEV
+PARAMETERCOMPARISONOFNEURAL-NETWORK-BASEDMODELING
+ATTACKSONk-XORARBITERPUFS.
+Santikelluretal. Aseerietal. Mursietal.
+[23] [3] [17]
+Method TRN MLP MLP
+Architecture manydelaymod. (2k,2k,2k) (2k−1,2k,2k−1)
+Hid.lay.activ. — ReLU tanh
+Optimizer Adam Adam Adam
+Lossfunction BCE BCE BCE
+Learningrate (multiple) 10−3 adaptive
+Initializer GlorotNormal GlorotUnif. Gaussian
+k=5
+1010
+109
+108
+#CRPs
+(b)DatacollectedbyAghaieetal.[1]. 107
+Fig.3. ComparisonofimprovedLRattack(Sec.IV)andourMLPattack(Sec.
+VII) on FPGA data. These results are in line with our results on simulated 106
+data: the MLP attack shows lower data complexity for XOR Arbiter PUFs
+withalargenumberofXORsk.(*Trainingsetsizewasactually4,990,000;
+105
+10,000CRPswereusedfortesting.)
+104
+responses confirmed the expectation of decreasing bias with 4 5 6 7 8 9 10 11
+an increase in the number of XORs; the 4-XOR Arbiter PUF k
+has an average response of 0.03, the 9-XOR Arbiter PUF an
+average response of 10−5 (with its Boolean responses given
+as -1 and 1).
+The data of Aghaie and Moradi [1] contains a 64-
+bit (1,5)-Interpose PUF queried on 1 million uniformly
+random challenges, each including the responses of all 6
+individual Arbiter PUFs. The data also contains 11 repeated
+measurements of all challenges, which we only used to
+compute the reliability of the PUFs (all Arbiter PUFs had
+99.7% or better). For the attacks, we just used the first of
+the 11 measurements, discarding the other 10. We confirmed
+the quality of the data by testing that all six involved Arbiter
+PUFsindividuallycanbemodeledusingthedelaymodelwith
+high accuracy (all 98%). To use the Interpose PUF data in the
+context of XOR Arbiter PUF attacks, we discard the (64-bit)
+top layer and compose the five given 65-bit Arbiter PUFs of
+the Interpose bottom layer to 65-bit k-XOR Arbiter PUFs for
+k ∈{1,...,5}.ThedatashowsthattheinvolvedArbiterPUFs
+are heavily biased, with 3 out of 5 have an average response
+of 0.3 or higher, computed from Boolean responses given as
+-1 and 1.
+We ran the LR and MLP attack with varying number of
+CRPs on the XOR Arbiter PUFs obtained from the data to
+compare the data complexity of the attacks. The detailed
+results are displayed in Fig. 3. All attacks ran within a few
+seconds to few minutes each.
+TheresultsonthedataofMursietal.showthatfork-XOR
+ArbiterPUFswithk =5andk =7,thedatacomplexityofthe
+eziS
+teS
+gniniarT
+n = 64 n = 128
+Attack
+Aseeri et al. (Keras)
+Improved LR (Keras)
+Santikellur et al. (Keras)
+Mursi et al. (Keras)
+4 5 6 7
+k
+Fig. 4. Data complexity of our attacks on n-bit Arbiter PUF with k
+individual arbiter chains as determined as the lowest number of CRPs
+(amongexponentiallyincreasingoptions)thatyieldedatleast50%successful
+attacks, where successful means prediction accuracy of 90% or better. Our
+implementation of the attack by Mursi et al. outperforms the improved LR
+attackbyanordermagnitudewithregardtodatacomplexity.
+MLPismuchlowerthanthatoftheimprovedLRattack.(Note
+thatthex-axisisscaledapproximatelylogarithmically.)Onthe
+otherhand,theresultsonthedataofAghaieandMoradishow
+that the MLP attack is either unsuited or ill-parameterized for
+k-XOR Arbiter PUF with smaller numbers for k and provides
+no advantage or improved LR in data complexity, like we
+observed for results we obtained on simulated CRPs (Fig.
+4). As there is already a large variety of attacks available in
+this setting, we did not explore further if the neural-network
+attackscanbeoptimizedforthesesizes.Weconcludethatour
+experiments on real-world data confirm our findings obtained
+with simulated data.
+VIII. COMPARISONOFXORARBITERPUFATTACKS
+Ofthethreestudiedneural-network-basedmodelingattacks
+andtheimprovedLRattackusedasabaselineforcomparison,
+we found that the claims by Mursi et al. [17] could be traced
+back to an error in CRP generation, which leaves the work by
+Santikellur et al. [23] to claim, to the best of our knowledge,
+the lowest data complexity of XOR Arbiter PUFs in the
+
+===== PAGE 10 =====
+10
+literature. However, we were unable to replicate these attacks on the idea of introducing non-linearity to the response
+for the cases of 7-XOR and larger. behavior (as discussed in Sec. III-A) by adding more arbiter
+Among the attacks successfully replicated in this work, elements that pick up the signal on the delay lines before
+we found the attack by Mursi et al. [17] to have, despite they reach the last stage. These arbiter elements produce
+a relatively high number of trainable parameters, the lowest additional challenge bits which will be used in later stages.
+data complexity. Being an enhancement of neural network As such, the Feed-Forward Arbiter PUF can be thought
+attacks presented by Aseeri et al. [3] and Santikellur et al. of as a predecessor of the Interpose PUF, using the same
+[22] (not to be confused with the ECP-TRN), we attribute ArbiterPUFinsteadofanadditionallayerofPUFstoproduce
+the advantage in data complexity to the choice of network additional, attacker-unknown, challenge bits. We will refer to
+size and hyperparameters, concluding that a further reduction the additional arbiter elements and challenge bits as feed-
+of complexity may well be possible for more carefully forwardloops.AnextensionoftheFeed-ForwardArbiterPUF
+optimized settings. Optimizing further for the XOR Arbiter is the (homogeneous) XOR Feed-Forward Arbiter PUF [4],
+PUF,however,willnotyieldnovelresults,astheXORArbiter where the result bit is – similar to the XOR Arbiter PUF –
+PUF must be considered broken under reliability attacks determinedbyanumberofk individualFeed-ForwardArbiter
+[5]; optimization effort should be invested in neural-network PUFs with identical loop placements.
+attacks on other PUF designs. The Feed-Forward Arbiter PUF shows much stronger
+ComparingthedatacomplexityoftheMLP-attackbyMursi modeling attack resistance than the XOR Arbiter PUF.
+et al. to the results obtained with our improved version Ru¨hrmair et al. [21] attack only the Feed-Forward Arbiter
+of the LR attack, we find that MLP only has advantages PUFwhoseloopsarearrangedinregularpatterns.Kumarand
+in data complexity for XOR Arbiter PUFs with more than Burleson [13] demonstrated attacks on silicon data of Feed-
+four arbiter chains, but not for smaller designs. Next to the Forward Arbiter PUFs with up to 8 loops, using an attack
+above-mentioned steep increase of data complexity for larger based on evolution strategies. They report data complexity
+challenge lengths of the MLP-attack (cf. Sec. VII), we read much lower than our attack allows, but did not report results
+thisasevidencethattheneuralnetworkstructureisnotoptimal on XOR Feed-Forward Arbiter PUFs. Alkatheiri and Zhuang
+withrespecttoarbitraryvaluesofchallengelengthandnumber [2] use an MLP-based approach for learning, however their
+of XORs. attackshowsdecliningaccuracyforanincreaseinthenumber
+Comparing the complexity of the MLP-attack by Mursi et ofloops.Furthermore,theattackalsorequiresthelooppattern
+al.withtheMLP-attackbyAseerietal.,wefindthatthemain to be known to the attacker, a condition that will not easily
+differencesoftheattacksarethenetworkshapeandthechoice hold since different Feed-Forward Arbiter PUFs can have
+of activation function in the hidden layers. While Mursi et al. differentlooppatterns[2,personalcommunication].Whilethis
+demonstrated that attacks on XOR Arbiter PUFs are possible deficiency could be alleviated by either an (computationally
+on consumer laptops, our results show that the time and data expensive) brute-force search or via a physical attack on the
+complexity of attacks can be further reduced. As discussed circuit,theydonotreportattackresultsonXORFeed-Forward
+above, using the tanh activation function instead of ReLU Arbiter PUFs.
+provides outputs (inputs to the next layer) that are on average In this work, we attack n-bit Feed-Forward Arbiter PUFs
+zero, which is beneficial to the training process [14]. andXORFeed-ForwardArbiterPUFswithupto10loops.To
+For a detailed comparison of the four modeling attacks, runtheattack,weuseanMLPoffittedsize.Incontrasttothe
+graphs of the respectively used network structure are shown MLP network we used to attack the XOR Arbiter PUF, this
+in the full version of this paper [33]. Chosen hyperparameters network is composed of four hidden layers with n,n/2,n/2,n
+are shown in Tab. V, an overview over the data complexities neurons, respectively. In our experiments, increasing the
+is provided in Fig. 4. number of hidden layers beyond this resulted in a decrease
+We do not include a detailed comparison of run times, as in predictive power, increase of training time, or both. The
+most of the attacks presented in this work run in minutes, network shape and hyperparameters are chosen independently
+which makes a valid comparison difficult. Furthermore, using of the number of loops and their positioning, hence no
+the Keras-based implementation, our attacks can be run in a knowledge of this information is required to run the attack.
+variety of different settings, i.e., on CPUs and GPUs, with As argued for the XOR Arbiter PUF (see Sec. VII), we opted
+and without multi-threading, which will lead to different run tochoosethetanhactivationfunctionoverthecommonchoice
+times. In any event, none of the attack times reported in this of ReLU. The attack network is displayed in the full version
+work are prohibitively long for an attacker. of this paper [33]. We target both simulated PUFs, with the
+simulation based of an appropriate adaptation of the additive
+IX. MULTILAYERPERCEPTRONATTACKON delay model (Sec. III-A), and PUFs implemented on FPGAs.
+FEED-FORWARDARBITERPUFS We implemented 64-stage Feed-Forward Arbiter PUFs
+To illustrate our argument that MLP attack should become on three Artix®-7 FPGAs using the Xilinx Vivado design
+part of the standard security analysis of Strong PUF designs, suite that consists of an editable MicroBlaze CPU. VHSIC
+we apply our attacks to Feed-Forward Arbiter PUFs and Hardware Description Language (VHDL) was used to build
+variants thereof. the Feed-Forward Arbiter PUFs designs. The placement of
+Feed-Forward Arbiter PUFs were first introduced by each Feed-Forward Arbiter PUF on the chip was carried out
+Gassend et al. [11] and Lee et al. [15] and are based horizontally on the chips using the Tool Command Language
+
+===== PAGE 11 =====
+11
+TABLEVI attackperformanceevenwhenthechallengelengthisdoubled
+RESULTSOFATTACKING64-STAGEAND128-STAGESIMULATEDFFPUFS to approx. 128 bit. The detailed results on simulated data is
+USINGOURKERASBASEDIMPLEMENTATIONOFTHEMULTILAYER
+shown in Tab. VI for Feed-Forward Arbiter PUFs and in Tab.
+PERCEPTIONCOMPAREDWITHTHEMULTILAYERPERCEPTIONATTACKBY
+ALKATHEIRIET.AL.[2].THEIRMETHODASSUMESTHELOOPPATTERNIS VII for XOR Feed-Forward Arbiter PUFs.
+KNOWNTOTHEATTACKER,THEPROPOSEDMETHODHASNOSUCH In our experiments, increasing the depth of the neural
+ASSUMPTION.EACHSHOWNROWHASASUCCESSRATEOF10OUTOF10
+network and/or using different activation functions degraded
+TRIALS.
+performance of the attack compared to the results shown in
+no.of Alkatheiriet.al.[2] this work.
+n CRPs duration acc.
+loops CRPs duration acc. Our experiments with real-world data largely confirm the
+64 4 135k 6min 95% 200k 1.5min 89% attacks on 64-bit Feed-Forward Arbiter PUFs, independently
+64 6 315k 10min 93% 200k 6.2min 87%
+of the choice of loop pattern, with the attack on 10 loops
+64 8 540k 21min 92% — — —
+64 10 630k 26min 93% — — — requiring a lightly larger amount of 770,000 CPRs. As the
+XORoperationoftheXORFeed-ForwardArbiterPUFisdone
+128 1 36k 2min 96% 20k 1min 95%
+128 3 180k 8min 93% 100k 1min 92% in Boolean logic and noise-free, we expect that our results
+128 5 405k 17min 93% 200k 1.4min 87% in simulation also transfer to real-world data on XOR Feed-
+128 7 900k 35min 92% — — —
+Forward Arbiter PUFs. A table showing the results is omitted
+128 9 1.2M 45min 91% — — —
+for brevity.
+A further extension of the k-XOR Feed-Forward Arbiter
+TABLEVII PUF can be made by introducing heterogeneous loops, i.e.
+RESULTSOFATTACKING64-STAGESIMULATEDk-XORFEED-FORWARD
+ARBITERPUFS.RESULTSFORODDkAREOMITTEDFORBREVITY. by using individual loop placements on the k involved Feed-
+Forward Arbiter PUFs. We report that the network of our
+success success MLP attack is unable to attack heterogeneous XOR Feed-
+loops k CRPs rate duration accuracy memory
+Forward Arbiter PUFs even for moderate parameter settings
+2 120k 10/10 0.5min 98% <1GiB involving just one loop per Arbiter PUF and k =3. Modeling
+4 540k 10/10 2.8min 98% 2.6GiB
+1 accuracy was saturated at around 60%. We hence believe that
+6 900k 10/10 7min 98% 4.3GiB
+8 6M 7/10 6hrs 96% 10GiB the neural network structure will need major modifications,
+such as more layers, more nodes, or a structure different from
+2 180k 10/10 5min 97% 1GiB
+4 720k 10/10 32min 98% 3.5GiB fullyconnected,toallowsuccessfultrainingforthisextension
+2
+6 2.7M 9/10 1.4hrs 97% 9.8GiB and encourage further research in this direction.
+8 9.5M 9/10 22hrs 96% 18.8GiB
+Our results demonstrate that the MLP attack can model
+2 360k 10/10 8min 97% 1.8GiB variants of the Feed-Forward Arbiter PUFs that previously
+4 900k 10/10 2.3hrs 96% 3.3GiB
+3 were out of reach for modeling attacks. This underlines our
+6 3.15M 10/10 9.2hrs 94% 8.1GiB
+8 13.5M 6/10 40hrs 91% 21GiB argument that MLP attacks should be part of the security
+2 900k 10/10 1.4hrs 97% 3.7GiB analysisoffuturePUFdesignsandfurtherreducesthesecurity
+4 2.7M 9/10 8.3hrs 96% 6.9GiB level of the Feed-Forward Arbiter PUF family.
+4
+6 9M 6/10 26hrs 94% 13GiB
+8 18M 4/10 46hrs 92% 27GiB
+2 1.8M 10/10 4.9hrs 95% 6.4GiB X. CONCLUSION
+4 7.2M 7/10 19hrs 93% 14GiB
+5 In this work, we compared three neural-network-based
+6 11.7M 5/10 32hrs 91% 22GiB
+8 18M 4/10 24hrs 90% 30GiB XOR Arbiter PUF modeling attacks [23], [3], [17] against
+a baseline given by an improved version of the Logistic
+Regression modeling attack. While we could not replicate
+(TCL). AXI Universal Asynchronous Receiver Transmitter experiments that claim extremely low data complexity of
+(UART),withbaudrateof230kbits/second,wasusedtospeed attacks, our results prove that even XOR Arbiter PUFs with
+up the CRPs transformation between the Tera Term terminal perfectly reliable responses can be attacked faster, with far
+and the FPGAs. The Xilinx SDK was utilized to program fewer challenge-response pairs than previously known, and
+the input/output workflow of the CRPs generation from the consequently up to much security parameters. As increasing
+chips.TheimplementationwasdoneonthreeFPGAchips.We thesecurityparameterofXORArbiterPUFsistechnologically
+generated five million CRPs out of each implemented silicon challenging, our results cast further doubt that XOR Arbiter
+PUF. The CRPs were generated at an ambient temperature of PUFs of sufficient security level can be fabricated. Given the
+around 22°C, and core voltage set to 1.0V using the built-in large hyperparameter space of neural-network-based attacks,
+chips resistor. it is well possible that with more optimization, the attack
+Our results show that our MLP-based method is able to performance can be further improved.
+model64-stageFeed-ForwardArbiterPUFswith10loopsand Providing the implementations of all four attacks studied in
+64-stage 8-XOR Feed-Forward Arbiter PUFs when using 5 this work in a common framework and tested on a common
+homogeneous loops per Arbiter PUF. Note that the challenge platform, we are able to provide a fair comparison of their
+lengthofthePUFisreducedbythenumberofloopsinserted, performances and confirm that previously reported better
+however our results also indicate no fundamental change in performances are not just due to better frameworks or faster
+
+===== PAGE 12 =====
+12
+CPUs, but are an intrinsic property of the strategy employed XI. ACKNOWLEDGEMENTS
+by Mursi et al.’s multilayer perceptron-based modeling attack
+The authors would like to thank Anita Aghaie, Ahmad O.
+[17]. We further demonstrated that neural network modeling
+Aseeri, Amir Moradi, Pranesh Santikellur, Johannes Tobisch,
+attacks can be used to attack (XOR) Feed-Forward Arbiter
+and the anonymous reviewers. We acknowledge the provided
+PUFs for the security parameters typically studied in the
+HPC computing time of Texas Tech University, Technische
+literature. By applying the attack to silicon data of XOR
+Universita¨t Berlin, and Freie Universita¨t Berlin.
+Arbiter PUFs and Feed-Forward Arbiter PUFs, we confirm
+The research wassupported in part by theNational Science
+that these advantages carry over to implementations of these
+FoundationundergrantNo.2103563andtheGermanMinistry
+PUFs.
+for Education and Research as BBDC 2 (ref. 01IS18025A).
+The MLP’s advantage in data complexity and modeling
+power lets us conclude that neural-network-based attacks
+REFERENCES
+should become part of the standard toolkit for PUF security
+[1] Anita Aghaie and Amir Moradi. Inconsistency of Simulation
+analysis, as on the one hand, they allow for rapid testing for
+and Practice in Delay-based Strong PUFs. IACR Transactions on
+PUF design ideas [32], and on the other hand, as we showed CryptographicHardwareandEmbeddedSystems,pages520–551,July
+in this work, they may be able to provide lower attack time 2021.
+[2] MohammedSaeedAlkatheiriandYuZhuang.Towardsfastandaccurate
+or data complexity. However, we explicitly do not advocate
+machine learning attacks of feed-forward arbiter PUFs. In 2017 IEEE
+for neural-network-based attacks to replace the study of PUF Conference on Dependable and Secure Computing, pages 181–187,
+designbyspecializedattacksinspiredfromphysicalmodels.In August2017.
+[3] A. O. Aseeri, Y. Zhuang, and M. S. Alkatheiri. A Machine Learning-
+the case of XOR Arbiter PUFs, the physically inspired model
+Based Security Vulnerability Study on XOR PUFs for Resource-
+still has important relevance to the MLP-attack, as it provides Constraint Internet of Things. In 2018 IEEE International Congress
+thefeaturesonwhichthemodelingisbased.Hence,attempting onInternetofThings(ICIOT),pages49–56,July2018.
+[4] S.V.SandeepAvvaru,ZiqingZeng,andKeshabK.Parhi.Homogeneous
+the MLP attack without any knowledge of the physical model
+andHeterogeneousFeed-ForwardXORPhysicalUnclonableFunctions.
+would be to no avail, as the neural-network-based attacks IEEE Transactions on Information Forensics and Security, 15:2485–
+studied in this work fail when operating on challenge bits, 2498,2020.
+[5] Georg T. Becker. The Gap Between Promise and Reality: On the
+except for toy-sized XOR Arbiter PUFs.
+Insecurity of XOR Arbiter PUFs. In Tim Gu¨neysu and Helena
+In an application of the MLP attack to the Splitting Attack Handschuh, editors, Cryptographic Hardware and Embedded Systems
+– CHES 2015, Lecture Notes in Computer Science, pages 535–555.
+on Interpose PUFs, we underlined the importance of adding
+SpringerBerlinHeidelberg,2015.
+MLP to the standard toolkit for PUF security evaluation and [6] D. Chatterjee, D. Mukhopadhyay, and A. Hazra. PUF-G: A CAD
+demonstratedthatthelowdatacomplexityshowninthiswork Framework for Automated Assessment of Provable Learnability from
+Formal PUF Representations. In 2020 IEEE/ACM International
+hasalsoapplicationsinthesecurityanalysisofcompositePUF
+ConferenceOnComputerAidedDesign(ICCAD),pages1–9,November
+designs. 2020.
+[7] DurbaChatterjee,UrbiChatterjee,DebdeepMukhopadhyay,andAritra
+We falsified claims of Mursi et al. [17] of extremely low
+Hazra. SACReD:AnAttackFrameworkonSACResistantDelay-PUFs
+data complexity of XOR Arbiter PUF modeling attacks and leveragingBiasandReliabilityFactors. February2021.
+reevaluated their results, showing that their attack still has [8] J. Delvaux. Machine-Learning Attacks on PolyPUFs, OB-PUFs,
+RPUFs,LHS-PUFs,andPUF–FSMs.IEEETransactionsonInformation
+data complexity an order of magnitude lower than state-of-
+ForensicsandSecurity,14(8):2043–2058,August2019.
+the-art attacks. We further falsified the claims of Nguyen et [9] JeroenDelvauxandIngridVerbauwhede.Sidechannelmodelingattacks
+al.[19]thattheLogisticRegressionattackhasthelowestdata on 65nm arbiter PUFs exploiting CMOS device noise. In Hardware-
+Oriented Security and Trust (HOST), 2013 IEEE International
+complexityamongallmodelingattacksonXORArbiterPUFs.
+SymposiumOn,pages137–142.IEEE,2013.
+To facilitate future security analyses of PUFs and to avoid [10] Fatemeh Ganji, Shahin Tajik, Fabian Fa¨ßler, and Jean-Pierre Seifert.
+StrongMachineLearningAttackAgainstPUFswithNoMathematical
+errors in such attacks, we publish all our implementations
+Model. In Benedikt Gierlichs and Axel Y. Poschmann, editors,
+as a free open-source contribution to the pypuf framework CryptographicHardwareandEmbeddedSystems–CHES2016,Lecture
+[31], and encourage the PUF community to do similarly. The NotesinComputerScience,pages391–411.SpringerBerlinHeidelberg,
+2016.
+code of this work and the above detailed discussion of attack
+[11] Blaise Gassend, Daihyun Lim, Dwaine Clarke, Marten van Dijk, and
+methodology, hyperparameter choices, and network design SrinivasDevadas.Identificationandauthenticationofintegratedcircuits.
+shed light on some of the inner workings of MLP-based PUF ConcurrencyandComputation:PracticeandExperience,16(11):1077–
+1098,September2004.
+modeling attacks and may help to apply the MLP approach to
+[12] Diederik P. Kingma and Jimmy Ba. Adam: A Method for Stochastic
+other PUF designs. Optimization. arXiv:1412.6980[cs],January2017.
+[13] RaghavanKumarandWayneBurleson.Side-ChannelAssistedModeling
+Ourresultsraisethequestionifreliability-basedattackslike Attacks on Feed-Forward Arbiter PUFs Using Silicon Data. In
+the recently presented one by Tobisch et al. [26] can benefit Stefan Mangard and Patrick Schaumont, editors, Radio Frequency
+Identification,LectureNotesinComputerScience,pages53–67,Cham,
+from the neural network approach in a similar way. If so,
+2015.SpringerInternationalPublishing.
+that may pave the way to generalize reliability attacks to PUF [14] YannLecun,LeonBottou,GenevieveB.Orr,andK.Muller. Efficient
+designs other than the XOR Arbiter PUF (and its variants). backdrop. InG.OrrandK.Muller,editors,NeuralNetworks.Springer,
+1998.
+Finally, with XOR Arbiter PUF, Interpose PUFs, and [15] J. W. Lee, Daihyun Lim, B. Gassend, G. E. Suh, M. van Dijk, and
+homogeneous XOR Feed-Forward Arbiter PUFs successfully S.Devadas. Atechniquetobuildasecretkeyinintegratedcircuitsfor
+identification and authentication applications. In 2004 Symposium on
+attacked,itwillbeinterestingtoseewhichotherPUFdesigns
+VLSICircuits.DigestofTechnicalPapers(IEEECat.No.04CH37525),
+neural-network-based attacks will be able to model. pages176–179,June2004.
+
+===== PAGE 13 =====
+13
+[16] M. Majzoobi, M. Rostami, F. Koushanfar, D. S. Wallach, and Strategy.IACRTransactionsonCryptographicHardwareandEmbedded
+S.Devadas. SlenderPUFProtocol:ALightweight,Robust,andSecure Systems,pages97–120,June2020.
+Authentication by Substring Matching. In 2012 IEEE Symposium on [33] Nils Wisiol, Khalid T. Mursi, Jean-Pierre Seifert, and Yu Zhuang.
+SecurityandPrivacyWorkshops,pages33–44,May2012. Neural-Network-Based Modeling Attacks on XOR Arbiter PUFs
+[17] Khalid T. Mursi, Bipana Thapaliya, Yu Zhuang, Ahmad O. Aseeri, Revisited. TechnicalReport555,2021.
+and Mohammed Saeed Alkatheiri. A Fast Deep Learning Method for [34] Risa Yashiro, Takanori Machida, Mitsugu Iwamoto, and Kazuo
+Security Vulnerability Study of XOR PUFs. Electronics, 9(10):1715, Sakiyama. Deep-Learning-BasedSecurityEvaluationonAuthentication
+October2020. Systems Using Arbiter PUF and Its Variants. In Kazuto Ogawa
+[18] Khalid T Mursi, Yu Zhuang, Mohammed Saeed Alkatheiri, and and Katsunari Yoshioka, editors, Advances in Information and
+Ahmad O Aseeri. Extensive examination of xor arbiter pufs as ComputerSecurity,volume9836,pages267–285.SpringerInternational
+security primitives for resource-constrained iot devices. In 2019 17th Publishing,Cham,2016.
+International Conference on Privacy, Security and Trust (PST), pages [35] Meng-DayYu,MatthiasHiller,JeroenDelvaux,RichardSowell,Srinivas
+1–9.IEEE,2019. Devadas,andIngridVerbauwhede. ALockdownTechniquetoPrevent
+[19] Phuong Ha Nguyen, Durga Prasad Sahoo, Chenglu Jin, Kaleel Machine Learning on PUFs for Lightweight Authentication. IEEE
+Mahmood,UlrichRu¨hrmair,andMartenvanDijk. TheInterposePUF: Transactions on Multi-Scale Computing Systems, 2(3):146–159, July
+SecurePUFDesignagainstState-of-the-artMachineLearningAttacks. 2016.
+IACRTransactionsonCryptographicHardwareandEmbeddedSystems, [36] Meng-Day Yu, David M’Ra¨ıhi, Ingrid Verbauwhede, and Srinivas
+pages243–290,August2019. Devadas. A noise bifurcation architecture for linear additive physical
+[20] Ravikanth Pappu, Ben Recht, Jason Taylor, and Neil Gershenfeld. functions. In 2014 IEEE International Symposium on Hardware-
+Physical One-Way Functions. Science, 297(5589):2026–2030, OrientedSecurityandTrust(HOST),pages124–129,May2014.
+September2002. [37] Haoyu Zhuang, Xiaodan Xi, Nan Sun, and Michael Orshansky. A
+[21] Ulrich Ru¨hrmair, Frank Sehnke, Jan So¨lter, Gideon Dror, Srinivas StrongSubthresholdCurrentArrayPUFResilienttoMachineLearning
+Devadas, and Ju¨rgen Schmidhuber. Modeling Attacks on Physical Attacks. IEEETransactionsonCircuitsandSystemsI:RegularPapers,
+Unclonable Functions. In Proceedings of the 17th ACM Conference 67(1):135–144,January2020.
+onComputerandCommunicationsSecurity,CCS’10,pages237–249,
+NewYork,NY,USA,2010.ACM.
+[22] Pranesh Santikellur, Aritra Bhattacharyay, and Rajat Subhra
+Chakraborty. Deep Learning based Model Building Attacks on
+ArbiterPUFCompositions. page10,2019.
+[23] PraneshSantikellur,Lakshya,ShashiRanjanPrakash,andRajatSubhra
+Chakraborty. A Computationally Efficient Tensor Regression Network
+based Modeling Attack on XOR APUF. In 2019 Asian Hardware
+Oriented Security and Trust Symposium (AsianHOST), pages 1–6,
+December2019.
+[24] G. Edward Suh and Srinivas Devadas. Physical Unclonable Functions
+forDeviceAuthenticationandSecretKeyGeneration.InProceedingsof
+the44thAnnualDesignAutomationConference,DAC’07,pages9–14,
+NewYork,NY,USA,2007.ACM.
+[25] ShahinTajik,EnricoDietz,SvenFrohmann,Jean-PierreSeifert,Dmitry
+Nedospasov, Clemens Helfmeier, Christian Boit, and Helmar Dittrich.
+PhysicalCharacterizationofArbiterPUFs. InDavidHutchison,Takeo
+Kanade,JosefKittler,JonM.Kleinberg,FriedemannMattern,JohnC.
+Mitchell, Moni Naor, Oscar Nierstrasz, C. Pandu Rangan, Bernhard
+Steffen, Madhu Sudan, Demetri Terzopoulos, Doug Tygar, Moshe Y.
+Vardi,GerhardWeikum,CamilleSalinesi,MoiraC.Norrie,andO´scar
+Pastor, editors, Advanced Information Systems Engineering, volume
+7908, pages 493–509. Springer Berlin Heidelberg, Berlin, Heidelberg,
+2014.
+[26] Johannes Tobisch, Anita Aghaie, and Georg T. Becker. Combining
+OptimizationObjectives:NewModelingAttacksonStrongPUFs.IACR
+TransactionsonCryptographicHardwareandEmbeddedSystems,pages
+357–389,February2021.
+[27] Johannes Tobisch and Georg T. Becker. On the scaling of machine
+learning attacks on PUFs with application to noise bifurcation. In
+InternationalWorkshoponRadioFrequencyIdentification:Securityand
+PrivacyIssues,pages17–31.Springer,2015.
+[28] L.G.Valiant. Atheoryofthelearnable. CommunicationsoftheACM,
+27(11):1134–1142,November1984.
+[29] Abilash Venkatesh, Aishwarya Bahudhanam Venkatasubramaniyan,
+Xiaodan Xi, and Arindam Sanyal. 0.3 pJ/Bit Machine Learning
+ResistantStrongPUFUsingSubthresholdVoltageDividerArray. IEEE
+Transactions on Circuits and Systems II: Express Briefs, 67(8):1394–
+1398,August2020.
+[30] NilsWisiol,GeorgT.Becker,MarianMargraf,TudorA.A.Soroceanu,
+Johannes Tobisch, and Benjamin Zengin. Breaking the Lightweight
+SecurePUF:UnderstandingtheRelationofInputTransformationsand
+Machine Learning Resistance. In Sonia Bela¨ıd and Tim Gu¨neysu,
+editors,SmartCardResearchandAdvancedApplications,LectureNotes
+inComputerScience,pages40–54,Cham,2020.SpringerInternational
+Publishing.
+[31] Nils Wisiol, Christoph Gra¨bnitz, Christopher Mu¨hl, Benjamin Zengin,
+Tudor Soroceanu, Niklas Pirnay, and Khalid T. Mursi. pypuf:
+CryptanalysisofPhysicallyUnclonableFunctions,2021.
+[32] Nils Wisiol, Christopher Mu¨hl, Niklas Pirnay, Phuong Ha Nguyen,
+Marian Margraf, Jean-Pierre Seifert, Marten van Dijk, and Ulrich
+Ru¨hrmair. Splitting the Interpose PUF: A Novel Modeling Attack

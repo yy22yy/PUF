@@ -1,0 +1,68 @@
+{
+  "artifact": "tt-rank-symmetry-analysis.md",
+  "date": "2026-10-31",
+  "status": "passed_static_checks_with_author_symbolic_review",
+  "sha256": "96fd1841bba58b118f95036d1aa905093dbdae2131a9baf49a31bb542c0aa832",
+  "display_formula_count": 95,
+  "automated_checks": [
+    "展示公式独立定界与配对",
+    "TeX花括号、left/right与环境配对",
+    "十个主节编号连续、十个新增证明小节存在",
+    "无表格内公式、HTML锚点、异常控制字符",
+    "文内本地链接及来源文件存在",
+    "完整配置非回文、局部五项连接回文",
+    "相邻连接乘积与29672参数量精确算术核对",
+    "来源台账JSON解析"
+  ],
+  "manual_symbolic_review": [
+    "矩阵尺寸上界与实际最小秩、分配连接容量三者明确区分",
+    "转置同一分割不等于同一张量的另一连续连接；四阶反例的三个秩为2、1、1",
+    "反转张量展开与互补位置展开的转置只差组内行列置换；反转不变性是充分而非必要条件",
+    "各连接的谱容限近似秩对称不自动推出顺序TT-SVD实际输出秩对称",
+    "七核全局配置与Tucker上界非对称；只有第3至6核子模块尺寸及局部上界镜像匹配",
+    "相邻连接乘积是Tucker秩上界而非实际秩，不误引为教材4.1现成定理",
+    "重复输入的函数置换等价不等于权重对称；二阶对称化符号反例可升秩",
+    "反转并转置核切片的标量评分等式可逆，限定独立核、共同输入、无位置特定额外操作",
+    "未从容量、对称结构或参数量推导选7的历史、最优性、泛化或收敛保证",
+    "逐项定义L、B后仅剩切分连接下标求和，乘积列空间给出秩上界",
+    "精确TT-SVD归纳中Sk=Qk-1与单位矩阵的Kronecker积，复合下标顺序及全部尺寸匹配",
+    "Sk列正交给出Ck=Sk转置乘原展开，双向秩上界确立当前余项的秩；更新Qk维持归纳",
+    "七阶尺寸递推六步均与p的min(k,7-k)次方一致；双向相邻秩条件限定实际最小秩",
+    "反例三个展开逐项写出，首展开左右正交两项秩为2，其余非零外积秩为1",
+    "四阶反转的第一及中间展开下标对应正确；转置与置换的Gram等式保留非零谱",
+    "谱尾给原分割容限近似秩；接近反转不变只由距离函数三角不等式给误差差值界，不证明秩相同",
+    "完整六项最小秩为1、1、h1、h2、h3、1；非零外部向量的嵌入与对偶收缩证明秩不变",
+    "单模因子Ak列数为相邻连接乘积；对称上界一般式的镜像下标对应正确",
+    "局部成对转置核绑定只为反转不变的充分条件，不能从尺寸或某组核表面数值反推必要性",
+    "本核对为作者自查，不标记为独立专家或自动证明器认证"
+  ],
+  "local_links_checked": [
+    "/Users/across/Desktop/PUF/paper_analysis_20261022/source.pdf",
+    "/Users/across/Desktop/pre-summer-paper/papers/PUF/tensor_textbook.pdf",
+    "/Users/across/Desktop/pre-summer-paper/TT秩与Tucker秩的推导关系.pdf",
+    "/Users/across/Desktop/pre-summer-paper/Tucker 与 TT：两种张量分解的结构对比.pptx",
+    "/Users/across/Desktop/PUF/paper_analysis_20261022/RESEARCH_REQUIREMENTS.md",
+    "/Users/across/Desktop/PUF/paper_analysis_20261022/paper-card.md",
+    "/Users/across/Desktop/PUF/paper_analysis_20261022/tt-rank-theory.md",
+    "/Users/across/Desktop/PUF/paper_analysis_20261022/tt-rank-choice-analysis.md",
+    "/Users/across/Desktop/PUF/paper_analysis_20261022/work/tt-rank-symmetry-sources.json",
+    "/Users/across/Desktop/PUF/paper_analysis_20261022/work/tt-rank-symmetry-review.json"
+  ],
+  "training_performed": false,
+  "hyperparameter_search_performed": false,
+  "numerical_experiments_performed": false,
+  "browser_opened": false,
+  "typora_visual_preview_performed": false,
+  "math_renderer_compilation_performed": false,
+  "source_visual_render_review_performed": false,
+  "revision": "detailed-proofs-2026-10-31",
+  "source_pdf_pages_read_this_revision": {
+    "textbook": [
+      110,
+      167,
+      168,
+      171,
+      367
+    ]
+  }
+}

@@ -1,0 +1,288 @@
+{
+  "artifact": "../tt-rank-symmetry-analysis.md",
+  "date": "2026-10-31",
+  "scope": "理论说明、符号反例与精确参数量算术；没有训练、搜索或数值实验",
+  "page_system": "所有页码均为从1开始的PDF文件页码；演示文稿用幻灯片页次",
+  "sources": {
+    "tenax": "/Users/across/Desktop/PUF/paper_analysis_20261022/source.pdf",
+    "textbook": "/Users/across/Desktop/pre-summer-paper/papers/PUF/tensor_textbook.pdf",
+    "rank_derivation": "/Users/across/Desktop/pre-summer-paper/TT秩与Tucker秩的推导关系.pdf",
+    "structure_slides": "/Users/across/Desktop/pre-summer-paper/Tucker 与 TT：两种张量分解的结构对比.pptx"
+  },
+  "direct_read": {
+    "tenax_pdf_pages": [
+      3,
+      6,
+      7,
+      8
+    ],
+    "textbook_pdf_pages": [
+      159,
+      162,
+      163,
+      165,
+      168,
+      171
+    ],
+    "rank_derivation_pdf_pages": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "structure_slides": "全部12页的文本及公式对象文字，重点8至11页",
+    "limitations": [
+      "本轮未对PDF和演示文稿进行渲染视觉审查",
+      "配套推导PDF部分公式文本缺失，使用可编辑演示文稿文字与独立推导交叉核对",
+      "未启动浏览器或Typora"
+    ],
+    "additional_pdf_pages_this_revision": [
+      110,
+      167,
+      168,
+      171,
+      367
+    ],
+    "prior_page_169_context": "沿用已有理论报告与来源记录；本次没有直接重读该页，正文给出独立归纳证明"
+  },
+  "claims": [
+    {
+      "sections": "1、6",
+      "type": "paper_fact_and_arithmetic",
+      "claim": "原配置、258维特征与29672个分配参数；全局配置并非回文序列",
+      "sources": [
+        {
+          "document": "tenax",
+          "pdf_pages": [
+            7,
+            8
+          ]
+        }
+      ],
+      "boundary": "未证明原作者的选参历史或具体数值最优性"
+    },
+    {
+      "sections": "2",
+      "type": "textbook_based_derivation",
+      "claim": "连接容量限制连续切分矩阵秩；最小精确秩由切分矩阵秩给出",
+      "sources": [
+        {
+          "document": "textbook",
+          "pdf_pages": [
+            159,
+            162,
+            163,
+            171
+          ]
+        }
+      ],
+      "prior_cross_check": "tt-rank-theory.md 第3节及其来源记录，包含算法8.2的精确分解依据",
+      "conditions": [
+        "非零张量",
+        "固定模顺序",
+        "精确表示与容量上界分开"
+      ]
+    },
+    {
+      "sections": "3",
+      "type": "textbook_fact_and_derivation",
+      "claim": "等模长尺寸上界为p的min(k,q-k)次方，具有镜像轮廓",
+      "sources": [
+        {
+          "document": "textbook",
+          "pdf_pages": [
+            165,
+            168
+          ],
+          "locators": [
+            "Remark 8.1",
+            "Remark 8.4"
+          ]
+        }
+      ],
+      "boundary": "不是实际秩、建议秩或取7的推导"
+    },
+    {
+      "sections": "4、5",
+      "type": "new_symbolic_derivation",
+      "claim": "等模长反例秩为(2,1,1)；反转张量使最小秩向量反转；反转不变性足以保证最小秩镜像相等",
+      "basis": "连续展开、转置与行列置换不改变秩",
+      "boundary": "符号构造；未执行数值试验；不声称一般截断TT-SVD的输出秩必然对称"
+    },
+    {
+      "sections": "6",
+      "type": "new_derivation_and_prior_material_cross_check",
+      "claim": "四阶局部模块尺寸为(1,7,7,7,1)，单模秩上界为(7,49,49,7)；局部尺寸对称不要求核数值对称",
+      "sources": [
+        {
+          "document": "tenax",
+          "pdf_pages": [
+            6,
+            7,
+            8
+          ]
+        },
+        {
+          "document": "textbook",
+          "pdf_pages": [
+            159,
+            162,
+            163
+          ]
+        },
+        {
+          "document": "rank_derivation",
+          "pdf_pages": [
+            3,
+            4,
+            5
+          ]
+        },
+        {
+          "document": "structure_slides",
+          "slides": [
+            9,
+            10,
+            11
+          ]
+        }
+      ],
+      "boundary": "Tucker秩上界证明不能仅归因于教材4.1的秩定义"
+    },
+    {
+      "sections": "7.1、7.2",
+      "type": "paper_fact_with_new_derivation",
+      "claim": "重复输入使评分模置换不变，但不能识别唯一权重秩；对称化可能升秩",
+      "sources": [
+        {
+          "document": "tenax",
+          "pdf_pages": [
+            3,
+            7
+          ]
+        }
+      ],
+      "conditions": [
+        "比较TT内积评分",
+        "同一特征在各模重复输入",
+        "其他输出参数一致"
+      ],
+      "boundary": "二阶秩1与秩2的对照是符号反例，不是训练结果"
+    },
+    {
+      "sections": "7.3",
+      "type": "new_conditional_derivation",
+      "claim": "反转并转置核切片，得到相同的标量TT评分，因此反向配置的评分函数族相同",
+      "sources": [
+        {
+          "document": "tenax",
+          "pdf_pages": [
+            7
+          ],
+          "locator": "式13至14的收缩与矩阵连乘"
+        }
+      ],
+      "conditions": [
+        "各核独立",
+        "各模共享输入z",
+        "无位置特定额外操作",
+        "输出接线及参数保持一致"
+      ],
+      "boundary": "不是核共享实现的认证，不保证实际优化轨迹相同，也不把任意置换当作保持同一TT秩"
+    },
+    {
+      "sections": "2.3–2.5",
+      "type": "expanded_textbook_based_derivation",
+      "claim": "逐下标收缩证明连续切分因子分解；列正交前缀归纳证明所有切分最小秩可同时实现；补零证明较大架构包含该表示",
+      "sources": [
+        {
+          "document": "textbook",
+          "pdf_pages": [
+            167,
+            168,
+            171
+          ],
+          "locator": "Algorithm 8.2; orthogonal-prefix setup; left/right factorization"
+        }
+      ],
+      "conditions": [
+        "非零张量",
+        "固定一致的复合下标顺序",
+        "精确算术",
+        "每步保留全部非零奇异值"
+      ],
+      "boundary": "不适用于把监督梯度训练当作TT-SVD，也不声称截断余项与原始展开谱相同"
+    },
+    {
+      "sections": "3.3",
+      "type": "expanded_textbook_fact_and_derivation",
+      "claim": "七阶最大递推尺寸逐步展开；实际相邻最小秩满足双向相容上界",
+      "sources": [
+        {
+          "document": "textbook",
+          "pdf_pages": [
+            167,
+            168
+          ],
+          "locator": "Algorithm 8.2; Remark 8.4"
+        }
+      ],
+      "boundary": "实际最小秩约束不等于分配的冗余连接维数约束"
+    },
+    {
+      "sections": "5.3–5.5",
+      "type": "new_detailed_symbolic_derivation",
+      "claim": "四阶模反转下标对应证明；Gram矩阵正交相似证明奇异谱相同；同容限原分割近似秩镜像相等；近似反转不变性只给误差差值界",
+      "sources": [
+        {
+          "document": "textbook",
+          "pdf_pages": [
+            367
+          ],
+          "locator": "Theorem A.26 supplies the optimal truncation error, not the symmetry theorem"
+        }
+      ],
+      "conditions": [
+        "对称谱结论要求目标反转不变",
+        "近似反转误差使用Frobenius范数",
+        "比较原始分割的最优矩阵近似"
+      ],
+      "boundary": "不证明TT-SVD输出秩对称，不证明实际TENAX目标反转不变或取7必要"
+    },
+    {
+      "sections": "6.5–6.7",
+      "type": "expanded_new_derivation",
+      "claim": "逐元素消去维数1的连接得到四阶模块；外部非零因子保留模块切分秩；单模展开矩阵因子证明Tucker上界；成对转置核绑定提供反转不变性的充分条件",
+      "sources": [
+        {
+          "document": "textbook",
+          "pdf_pages": [
+            110,
+            167
+          ],
+          "locator": "Tucker definition and TT core representation"
+        },
+        {
+          "document": "tenax",
+          "pdf_pages": [
+            6,
+            7,
+            8
+          ]
+        }
+      ],
+      "conditions": [
+        "比较非零权重时各外部因子非零",
+        "核绑定仅为教学充分条件，不是已核实实现"
+      ],
+      "boundary": "连接尺寸匹配不施加核数值等式；充分条件不是必要条件"
+    },
+    {
+      "sections": "8",
+      "type": "evidence_boundary_index",
+      "claim": "列出原文依据、本文教学补证与尚缺目标假设三类证据，不将数学结构证明升级为对称策略或秩7的最优性证明"
+    }
+  ],
+  "revision": "detailed-proofs-2026-10-31"
+}

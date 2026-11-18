@@ -1,0 +1,220 @@
+{
+  "date": "2026-10-31",
+  "status": "completed_with_explicit_scope_limits",
+  "sources": [
+    {
+      "id": "textbook",
+      "path": "/Users/across/Desktop/pre-summer-paper/papers/PUF/tensor_textbook.pdf",
+      "verified_pdf_pages": [
+        110,
+        165,
+        168,
+        170,
+        171,
+        367
+      ],
+      "method": "pypdf text extraction and symbolic comparison",
+      "sha256": "b327d14e90a68f9c437e52a45a3d811ac24c077b3a4fae057bdba55d33515486"
+    },
+    {
+      "id": "tenax",
+      "path": "/Users/across/Desktop/PUF/paper_analysis_20261022/source.pdf",
+      "verified_pdf_pages": [
+        3,
+        6,
+        7,
+        8
+      ],
+      "method": "pypdf text extraction",
+      "sha256": "869ef2a87126fbe45e72ece484080963c744db5c34e8c3ae12f42e1bce62a1ad"
+    },
+    {
+      "id": "kr2021",
+      "path": "/Users/across/Desktop/PUF/paper_analysis_20261022/work/khavari-rabusseau-2021.pdf",
+      "url": "https://proceedings.neurips.cc/paper/2021/file/5a9d8bf5b7a4b35f3110dde8673bdda2-Paper.pdf",
+      "authors": [
+        "Behnoush Khavari",
+        "Guillaume Rabusseau"
+      ],
+      "title": "Lower and Upper Bounds on the Pseudo-Dimension of Tensor Network Models",
+      "venue": "NeurIPS 2021",
+      "verified_pdf_pages": [
+        1,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "method": "official PDF download and pypdf text extraction",
+      "limitations": [
+        "13-page main paper; supplemental Appendix A.1 not independently verified",
+        "pypdf warned about two incorrect object offsets; relevant page text extracted"
+      ],
+      "sha256": "7e720efbe1161dfdfc57435308abbce47e3fd39780020c0a5cd7278666830bf4"
+    }
+  ],
+  "claims": [
+    {
+      "id": "E01",
+      "claim": "TT 与 Tucker 的展开不同",
+      "source_locator": "textbook PDF 110 Definition 4.1; tenax PDF 6; independent unfolding derivation",
+      "conditions": "固定模顺序；非零张量用于最小正连接尺寸约定",
+      "verification_status": "原文定义与独立推导核对",
+      "allowed_statement": "四阶 r1=s1、r3=s4，但中央 TT 秩一般不等于单模秩",
+      "forbidden_inference": "r2=s2"
+    },
+    {
+      "id": "E02",
+      "claim": "实际秩、核容量、尺寸上界",
+      "source_locator": "textbook PDF 165 Remark 8.1; 168 Remark 8.4; 171 left-right factorization",
+      "conditions": "给定 TT 参数化与模尺寸",
+      "verification_status": "原文核对及矩阵因子推导",
+      "allowed_statement": "r_k <= R_k 且 r_k <= U_k",
+      "forbidden_inference": "实际秩总等于配置尺寸"
+    },
+    {
+      "id": "E03",
+      "claim": "对称尺寸上界与独立预算数量",
+      "source_locator": "textbook PDF 168 Remark 8.4; independent index counting",
+      "conditions": "等模长或镜像模长；预算对称是设计约束",
+      "verification_status": "符号推导核对",
+      "allowed_statement": "对称模板减少独立预算；不保证最佳",
+      "forbidden_inference": "任何目标实际秩必定对称"
+    },
+    {
+      "id": "E04",
+      "claim": "反转条件与反例",
+      "source_locator": "independent reversal permutation proof; existing symmetry report sections 4–5",
+      "conditions": "目标反转不变是充分条件；反例 A invertible, u,v nonzero",
+      "verification_status": "独立符号证明",
+      "allowed_statement": "反转不变目标对应切分秩与谱相同",
+      "forbidden_inference": "重复输入迫使权重反转不变"
+    },
+    {
+      "id": "E05",
+      "claim": "谱尾与 TT-SVD 误差",
+      "source_locator": "textbook PDF 367 Theorem A.26; 170–171 Theorems 8.6–8.7",
+      "conditions": "已知目标；TT-SVD 本步余项误差区别于原始展开谱尾",
+      "verification_status": "原文与条件核对",
+      "allowed_statement": "谱可以说明近似所需大小；上界不推出7",
+      "forbidden_inference": "TT-SVD 保证 Adam 收敛或准确率"
+    },
+    {
+      "id": "E06",
+      "claim": "Tucker 上界与 TENAX 局部结构",
+      "source_locator": "textbook PDF 110; tenax PDF 6–8; independent core-environment factorization",
+      "conditions": "核连接尺寸固定",
+      "verification_status": "原文事实与独立推导",
+      "allowed_statement": "完整上界 (1,1,7,49,49,7,1)，仅局部模块尺寸对称",
+      "forbidden_inference": "完整 TENAX 配置全局对称"
+    },
+    {
+      "id": "E07",
+      "claim": "函数族嵌套",
+      "source_locator": "independent zero-padding proof",
+      "conditions": "同一固定特征映射；逐分量增大预算；相同未正则化损失",
+      "verification_status": "独立符号证明",
+      "allowed_statement": "大模型经验损失下确界不更差",
+      "forbidden_inference": "实际训练必然更好"
+    },
+    {
+      "id": "E08",
+      "claim": "VC 与泛化界",
+      "source_locator": "kr2021 PDF 4–5 definitions; 6 Theorem 2; 7 Theorem 4 Eq.7; 8 Corollary 6",
+      "conditions": "固定 TN 类；i.i.d.；有界二元分类损失；本报告不外推极端小样本数值界",
+      "verification_status": "主文定理陈述核实；补充证明未独立核验",
+      "allowed_statement": "容量界支持有限样本下控制不必要容量",
+      "forbidden_inference": "直接覆盖无界交叉熵、同样本 PCA 与完整输出头"
+    },
+    {
+      "id": "E09",
+      "claim": "参数增长和误差机制",
+      "source_locator": "tenax PDF 8; kr2021 PDF 7–8; independent risk decomposition",
+      "conditions": "配置族 (1,1,1,R,R,R,1,1)；风险分解使用同一有界损失",
+      "verification_status": "算术与符号核对",
+      "allowed_statement": "核参数 p(3+2R+2R²)；效果可能变差但非必然",
+      "forbidden_inference": "上界变大证明实际误差变大"
+    },
+    {
+      "id": "E10",
+      "claim": "理想乘积秩1",
+      "source_locator": "tenax PDF 3 Eq.2; independent outer product derivation",
+      "conditions": "各因子非零；扩维表达需能表示原线性评分",
+      "verification_status": "原文事实与独立证明",
+      "allowed_statement": "理想模型存在全1 TT 表示",
+      "forbidden_inference": "实际最优秩为1或7"
+    },
+    {
+      "id": "E11",
+      "claim": "权重误差到分类稳定性",
+      "source_locator": "independent Cauchy–Schwarz and margin derivation",
+      "conditions": "存在目标代表；Frobenius 误差 epsilon；特征范数 B；分类间隔；噪声另论",
+      "verification_status": "独立符号证明",
+      "allowed_statement": "符号不一致概率 <= P(|f*| <= epsilon B^d)",
+      "forbidden_inference": "张量误差小无条件保证准确率高"
+    },
+    {
+      "id": "E12",
+      "claim": "重复输入的非唯一性",
+      "source_locator": "tenax PDF 7 Eq.12–14; independent symmetrization and matrix counterexample",
+      "conditions": "所有模使用共同输入；一致输出比较",
+      "verification_status": "原文与独立反例",
+      "allowed_statement": "相同函数可有不同秩的权重代表；反向配置函数族等价",
+      "forbidden_inference": "函数族反向等价证明配置必须对称"
+    }
+  ],
+  "execution_record": [
+    "Reused existing symmetry/theory reports; preserved all old reports",
+    "Read local source PDFs and downloaded official NeurIPS main paper",
+    "Created rationale and brief; updated requirements index",
+    "No training, hyperparameter search, numerical experiment, browser or renderer validation"
+  ],
+  "rulings": [
+    "Documentation-only task at explicitly requested paths: no new branch/worktree or code TDD; use symbolic and document static checks instead",
+    "User reported rank-performance trend remains unverified without logs",
+    "Generalization precision limited to original sign-inner-product class; no unsupported end-to-end TENAX guarantee"
+  ],
+  "open_evidence_gaps": [
+    "target reversal symmetry",
+    "target singular spectra",
+    "training and validation logs",
+    "complete TENAX output-head extension",
+    "same-training-sample PCA capacity treatment",
+    "supplemental proof verification"
+  ],
+  "validation": {
+    "status": "passed_static_checks_and_author_symbolic_review",
+    "artifacts": [
+      {
+        "file": "tt-rank-selection-brief.md",
+        "lines": 169,
+        "characters": 4569,
+        "display_math_blocks": 11,
+        "sha256": "9327b137aa1039dff770713c527aa585763448d5d1eeb8b22739094245e0cb40"
+      },
+      {
+        "file": "tt-rank-selection-rationale.md",
+        "lines": 385,
+        "characters": 12598,
+        "display_math_blocks": 29,
+        "sha256": "0257e601c0654d18ce8dea32d595fe882cd063de9c1a60c4d87546de678667fc"
+      }
+    ],
+    "checks": [
+      "balanced display math and code fences",
+      "local Markdown link targets exist",
+      "12 unique claim IDs",
+      "parameter count 29670 + 2 = 29672",
+      "Tucker bounds and non-palindromic full configuration",
+      "even/odd internal-rank pairing counts"
+    ],
+    "not_performed": [
+      "training",
+      "numerical experiments",
+      "browser or math rendering",
+      "independent external mathematical review"
+    ]
+  }
+}

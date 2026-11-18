@@ -1,0 +1,69 @@
+{
+  "status": "passed_with_documented_format_exemptions",
+  "raw_skill_validator": {
+    "ready": false,
+    "strict": true,
+    "summary": {
+      "fail": 1,
+      "warn": 1
+    },
+    "findings": [
+      {
+        "severity": "FAIL",
+        "code": "MISSING_EQUATION_ANCHORS",
+        "message": "Display equations exist, but paper.md has no E... anchors.",
+        "line": null
+      },
+      {
+        "severity": "WARN",
+        "code": "MISSING_EQUATION_INDEX",
+        "message": "Three or more display equations require an equation index.",
+        "line": null
+      }
+    ]
+  },
+  "format_check": {
+    "status": "passed",
+    "artifact": "tt-rank-theory.md",
+    "display_formulas": 54,
+    "source_claim_groups": 16,
+    "local_links_checked": 3,
+    "broken_links": [],
+    "raw_html_anchors": 0,
+    "math_in_tables": 0,
+    "checks": [
+      "display delimiters",
+      "TeX grouping",
+      "paired left/right delimiters",
+      "local source existence",
+      "page-number ranges"
+    ],
+    "typora_visual_preview_performed": false,
+    "training_or_numerical_experiments_performed": false
+  },
+  "format_exemptions": [
+    {
+      "code": "MISSING_EQUATION_ANCHORS",
+      "reason": "User explicitly requested removal of unnecessary HTML anchors for Typora; this artifact is a targeted theoretical tutorial, not a full bilingual reader."
+    },
+    {
+      "code": "MISSING_EQUATION_INDEX",
+      "reason": "Reader-facing artificial equation index was omitted with the anchors; source chapters and theorem identifiers are retained in the text and section-level source ledger."
+    }
+  ],
+  "source_cross_checks": [
+    "Textbook PDF 159, 162–171 and appendix PDF 341,367 read directly or through existing extraction and checked against source locators",
+    "Theorem 8.6 formula visually checked in existing E117 crop",
+    "Theorem 8.7 factor sqrt(q-1) visually checked in existing E119 crop",
+    "Algorithm 8.2 tolerance allocation visually checked in existing S1024 crop"
+  ],
+  "proof_review": [
+    "Exact cut-rank necessity distinguished from approximation case",
+    "Exact TT-SVD establishes simultaneous minimal cut ranks",
+    "Outer-product rank-one conclusion assumes nonzero factors and ideal product model",
+    "Parameter counts are scalar arithmetic, not numerical experiments",
+    "TT-SVD identities restricted to known tensor and orthogonal decomposition",
+    "Classification statements require identical feature/score conventions and a margin condition"
+  ],
+  "no_training_or_numerical_experiments": true
+}

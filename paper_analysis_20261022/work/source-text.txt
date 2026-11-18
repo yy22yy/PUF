@@ -1,0 +1,2435 @@
+TENAX: Tensor-Train Driven PUF Modeling
+Under Strict Query Constraints
+
+Anonymous NDSS Submission
+
+Abstract—Physical Unclonable Functions (PUFs) serve as
+foundational hardware roots of trust for chip authentication,
+cryptographic key generation, and supply chain protection. To
+defend these critical authentication primitives against rogue
+characterization in wild IoT deployments, practical silicon
+architectures enforce strict query limits. However, such severe
+query constraints simultaneously restrict the sample budgets
+available for proactive defensive security auditing, while ex-
+isting hardware evaluation methods universally suffer from
+exponential parameter explosion, heavy reliance on massive
+challenge-response pairs (CRPs), and prolonged profiling la-
+tency. To bridge this operational gap and enable practical,
+pre-deployment security verification, we present TENAX, an
+automated, grey-box penetration testing and security auditing
+framework specifically engineered for PUF-based hardware
+roots of trust. Driven by an innovative Tensor-Train core opti-
+mized over an expanded feature domain, TENAX confines the
+multi-chain auditing complexity to a polynomial scale without
+sacrificing physical representation power, thereby drastically
+maximizing data utilization and convergence stability under
+strict query starvation. Extensive red-team penetration exper-
+iments on both simulated benchmarks and commercial FPGA
+silicon validate TENAX’s efficacy as a sample-efficient auditing
+tool. On the challenging 128-bit 7-XOR APUF, TENAX achieves
+97.29% modeling accuracy with only 20M CRPs in 6.61 hours,
+whereas conventional modeling baselines require 400M CRPs
+and 196.77 hours to reach comparable accuracy, yielding a
+20× reduction in query budget and a 29.8× auditing speedup.
+On the 64-bit 8-XOR APUF, TENAX reduces the parameter
+space from 364,700 (in uncompressed tensor representations)
+down to 1,042, achieving a reduction of over two orders of
+magnitude. We further validate its robustness against physical
+environmental fluctuations through hardware implementations
+on 28 nm and 45 nm FPGAs across cross-technology discrepan-
+cies. By supporting XOR APUFs, iPUFs, and LSPUFs within
+a unified mathematical engine, TENAX establishes a highly
+versatile, sample-efficient, and automated pentesting utility for
+rigorously quantifying the security margins of contemporary
+hardware roots of trust.
+
+I. Introduction
+
+As hardware security becomes an increasingly critical cor-
+nerstone of modern computing systems, physical unclonable
+functions (PUFs) have emerged as vital hardware roots
+of trust. By leveraging manufacturing variations to pro-
+duce device-specific challenge-response pairs (CRPs), PUFs
+provide a foundational substrate for secure chip authenti-
+cation, cryptographic key derivation, and supply chain pro-
+
+Network and Distributed System Security (NDSS) Symposium 2027
+22–26 March 2027, Seoul, Republic of Korea
+ISBN 978-1-970672-09-1
+https://dx.doi.org/10.14722/ndss.2027.[23|24]xxxx
+www.ndss-symposium.org
+
+tection [1]–[7]. Anchoring their security profiles in physical
+uniqueness rather than traditional mathematical hardness as-
+sumptions, these primitives offer a highly compelling, cost-
+effective security baseline for resource-constrained Internet-
+of-Things (IoT) environments.
+
+To safeguard these hardware roots of trust against rogue
+characterization, practical silicon architectures enforce strict
+query limits or interface throttling protocols [8]. Para-
+doxically, while these constraints defend the chip,
+they
+simultaneously present a severe bottleneck for proactive
+defensive security auditing and pre-deployment pene-
+tration testing (pentesting). Consequently, state-of-the-art
+(SOTA) hardware evaluation methods universally struggle
+under strict query starvation [7], [9]–[17], [19], [20]. Even
+strong PUF designs, including XOR APUFs [5], iPUFs [6],
+and LSPUFs [21],
+traditionally demand massive sample
+collections and prolonged profiling latency to uncover their
+vulnerability profiles. Although advanced high-dimensional
+regression and structural learning models attempt to mitigate
+the curse of dimensionality, they universally suffer from
+severe parameter inflation [18], [22], [23], limiting their
+scalability for rapid, sample-efficient automated auditing.
+
+In real-world IoT deployments, PUF-based authentication
+operates across two distinct phases: Enrollment (where the
+server challenges the device and constructs an initial refer-
+ence profile) and Authentication (where incoming responses
+are verified against stored models). Crucially, this opera-
+tional flow dictates two practical security implications often
+overlooked in existing literature. First, due to environmental
+noise and hardware non-idealities, protocol verification tol-
+erates a non-zero bit error rate. Hence, an attacker does not
+require 100% modeling accuracy to successfully spoof au-
+thentication. Second, while defense designs implement strict
+query budgets during authentication to limit CRP harvesting,
+this budget cannot be reduced infinitely without triggering
+severe False Rejection Rates (FRR) and Denial-of-Service
+(DoS) on legitimate, noise-affected devices. Consequently,
+evaluating PUF security under stringent yet operational
+query limits represents a vital prerequisite for IoT security
+design.
+
+To overcome these scalability deadlocks, one might nat-
+urally expect that deploying modern automated pentesting
+tools, such as agentic Large Language Models (LLMs) or
+Reinforcement Learning (RL)-tuned pentesting agents, could
+streamline the verification workflow. In practice, however,
+such high-level agentic automation fails to resolve the
+core technical bottleneck when the underlying hardware
+assessment engine itself remains heavily over-parameterized.
+
+Confronted with an excessively large parameter search space
+under strict query constraints, prompt-based or RL-driven
+security agents inevitably suffer from inefficient trial-and-
+error, sparse optimization feedback, and prohibitive eval-
+uation latency. Consequently, without first fundamentally
+collapsing the structural complexity of the core mathematical
+evaluation model, high-level automated assistance alone can-
+not deliver reliable or scalable gains in pentesting efficiency,
+data utilization, or final characterization fidelity.
+
+Despite recent progress, three critical bottlenecks in hard-
+ware pentesting and automated security auditing remain
+insufficiently addressed:
+
+• Issue 1: Parameter hyper-inflation. Contemporary
+pentesting methods evaluate security by constructing
+surrogate models of target PUFs. However, these high-
+dimensional models suffer from excessive parameter
+complexity. As the compositional scale of the hardware
+target increases, structural representation requirements
+expand sharply, resulting in heavily over-parameterized
+frameworks that are prohibitive to optimize under data-
+starved regimes. Consequently, they are prone to severe
+overfitting and tend to overestimate the necessary query
+budget for characterization.
+
+• Issue 2: Audit efficiency vs. fidelity trade-off. Current
+verification methods fail
+to strike a viable balance
+between sample efficiency and assessment accuracy.
+In practice, they demand massive volumes of CRPs
+and prolonged execution latency to achieve depend-
+able characterization on complex primitives. Automated
+assistance, such as agentic LLMs or reinforcement-
+learning-based approaches, remains bottlenecked in this
+setting. They inherently depend on expensive evaluation
+loops and often require auxiliary side-channel signals
+beyond raw, response-only supervision.
+
+• Issue 3: Restricted Architectural Versatility. Mod-
+ern strong PUFs resist modeling attack through either
+enhanced structural non-linearity (e.g., XOR APUFs,
+iPUFs) or input-output correlation obfuscation (e.g.,
+LSPUFs). Existing pentesting tools are rarely versa-
+tile enough to bridge both design paradigms. Their
+characterization robustness drops significantly when
+confronted with complex architectural variants and
+physical environmental noise in deployed silicon.
+
+To resolve these foundational bottlenecks, we pro-
+pose TENAX (Tensor-train Enhanced Network Assessment
+for XOR-based PUF architectures), an automated, query-
+efficient hardware pentesting framework engineered for
+compositional roots of trust under strict access restric-
+tions. At its core, TENAX leverages a unified architecture
+that directly executes tensor factorization within the PCA-
+expanded feature domain. This intrinsic mathematical syn-
+ergy collapses the parameter representation complexity of
+multi-chain designs from an exponential to a polynomial
+scale. Consequently, TENAX drastically maximizes data
+efficiency under rigid query budgets, enabling generalized,
+high-fidelity characterization across diverse compositional
+architectures (e.g., XOR APUFs, iPUFs, and LSPUFs) as
+
+well as non-ideal physical silicon without relying on out-of-
+band validation channels.
+
+Extensive red-team penetration experiments on both sim-
+ulated benchmarks and commercial FPGA implementations
+demonstrate that TENAX effectively shatters the data and
+latency bottlenecks in hardware security auditing. On a 128-
+bit 7-XOR APUF, TENAX consumes only 5% of the CRP
+budget required by SOTA pentesting baselines while cutting
+execution time from 196.77 hours to 6.61 hours, achieving a
+29.77× speedup alongside a 97.29% characterization accu-
+racy. These empirical findings prove that current hardware
+rate-limiting thresholds severely overestimate actual physical
+security margins; onboard access controls must enforce CRP
+lockout budgets far more strictly than previously assumed.
+In summary, TENAX delivers four core contributions to
+
+query-constrained hardware security auditing,
+(1) Tensor-Train Auditing Paradigm. We propose a novel
+pentesting framework that embeds Tensor-Train factorization
+into feature-expanded regression architectures. By collapsing
+multi-chain auditing complexity down to a polynomial scale,
+TENAX eliminates parameter explosion and overfitting un-
+der severe query starvation.
+(2) Unified Multi-Design Support. Rather than targeting
+isolated constructions, TENAX establishes a versatile mathe-
+matical engine that natively models heterogeneous hardware
+roots of trust. It supports a wide range of PUF designs,
+including XOR APUFs, iPUFs, and LSPUFs.
+(3) Rigorous Silicon Validation. Through extensive red-
+team evaluations on simulated benchmarks and commercial
+28 nm/45 nm FPGA silicon, TENAX achieves near-optimal
+characterization fidelity while cutting query budgets by up
+to 20× and runtime by 29.8× across intra- and inter-chip
+variations.
+(4) Open-Source Artifacts. To foster
+reproducible re-
+search, we release the complete pentesting framework,
+default hyperparameters, execution-environment specifica-
+tions, dataset-generation scripts, random seeds, and exper-
+iment configurations at https://anonymous.4open.science/r/
+TENAX-A11D.
+
+The remainder of this paper is organized as follows. Sec-
+tion II provides the necessary background and motivation.
+Section III formalizes the constrained penetration charac-
+terization setup, detailing the threat model and grey-box
+assumptions. Section IV introduces the proposed TENAX
+framework, derives its parameter complexity scaling with
+XOR complexity x, and details its structural extensions. Sec-
+tion V presents empirical evaluations of TENAX against cur-
+rent characterization baselines across representative strong
+PUF architectures. Finally, Section VI concludes the paper.
+TENAX code is available at https://anonymous.4open.
+
+science/r/TENAX-A11D.
+
+II. Motivation and Background
+
+In this section, we first review the background of key PUF
+architectures and their modeling formulations that form the
+theoretical foundation for TENAX. We then provide a tax-
+onomy and comparative analysis of contemporary pentesting
+
+TABLE I: Taxonomical Comparison of Security Evaluation Approaches Across Three Crucial Pentesting Dimensions (✓: Strong/Desirable,
+△: Partial, ×: Weak/Deficient): Parameter economy, data-latency Efficiency, and architectural Generality
+
+Pentesting Paradigm
+Linear Modeling [13]–[15]
+Connectionist [16], [17]
+Tensor Modeling (CP-based) [18]
+Heuristic LLM/ RL
+TENAX
+
+Characteristic
+Linear additive delay (LAD)-math model
+Architecture agnostic
+CANDECOMP/PARAFAC (CP) decomposition
+Automated and prompting
+Proposed in this work
+
+Parameter
+✓
+
+△
+×
+✓
+✓
+
+Efficiency
+×
+×
+△
+×
+✓
+
+Generality
+△
+✓
+
+△
+×
+✓
+
+quiring up to 350M CRPs for a 9-XOR APUF [6], [14].
+Although a tensor regression network (TRN) is able to
+reduce data overhead by mapping challenges into low-rank
+tensors [18], its scalability remains bottlenecked by high
+dimensionalities.
+
+The Interpose PUF (iPUF) deepens non-linearity by cas-
+cading an upper x-XOR layer and a lower y-XOR layer,
+interposing an internal response bit into the lower layer
+challenge space [6]. While divide-and-conquer evaluation
+strategies [19] reduce computational latency, assuming strict
+layer-wise separability compromises estimation fidelity and
+degrades under tight query constraints.
+
+Conversely, the Lightweight Secure PUF (LSPUF) ob-
+fuscates input-output correlations by applying distinct, bit-
+rotated and permuted challenges c(k) to each constituent
+Arbiter chain [20], [21]. Its joint response is governed by:
+
+f LS
+xor = sign
+
+(cid:33)
+
+wT
+
+k · Φk
+
+(cid:32) x
+(cid:89)
+
+k=1
+
+(3)
+
+where Φk is the transformed parity vector for the k-th
+permuted challenge. This challenge shuffling induces heavy
+local minima during standard optimization [20], [21]. Exist-
+ing mitigations either rely on sensitive heuristic initialization
+[20] or expressiveness-bounded tensor models [18].
+
+This divergence highlights the need for a unified pen-
+testing approach capable of handling diverse strong PUF
+architectures. Furthermore, rigorously probing the minimal
+query limits under stringent CRP constraints is essential to
+establish practical security baselines for configuring PUF-
+based authentication schemes. Specifically, in an enrollment-
+authentication lifecycle, protocol decision boundaries incor-
+porate fuzzy matching to accommodate thermal and voltage
+fluctuations. This implies that an adversary needs only to
+cross the protocol’s error-tolerance threshold rather than
+achieve absolute modeling precision. Meanwhile, system
+designers face a fundamental trade-off: setting an overly
+aggressive query cap prevents CRP leakage but risks ren-
+dering noisy legitimate devices unauthenticable (high FRR).
+Quantifying the attack performance under strict query limits
+thus reveals the exact security margins available for real-
+world authentication protocols.
+
+Fig. 1: Arbiter PUF (APUF) and its cascade switches.
+
+paradigms. Finally, we present a concrete experimental case
+study illustrating why LLM prompting fails to accurately
+predict PUF responses.
+
+A. Arbiter PUFs, XOR-Based Extensions, and their
+Security Evaluation
+
+To resist machine learning (ML)-based modeling attacks,
+modern Strong PUF designs generally pursue two key de-
+fense paradigms: enhancing structural non-linearity (e.g.,
+XOR APUFs and iPUFs) or obfuscating input-output cor-
+relations (e.g., LSPUFs). Evaluating these three representa-
+tive architectures thus provides a comprehensive benchmark
+for assessing PUF security.
+
+An n-bit Arbiter PUF (APUF) leverages manufacturing
+variations across two symmetrical delay lines. A challenge
+vector c controls stage transitions, and an arbiter generates a
+binary response r based on signal arrival differential (Fig. 1).
+Using the linear additive delay (LAD) model [24], [25], the
+delay difference is ∆ = wT Φ, where weight w captures
+stage delays and parity vector Φ is derived via [26]:
+
+Φ[n] = 1, Φ[i] =
+
+n−1
+(cid:89)
+
+(1 − 2c[j]),
+
+j=i
+
+i = 0, . . . , n − 1 (1)
+
+where r = 0 if ∆ ≥ 0, and r = 1 otherwise. Conventional
+security testing attempts to mathematically reconstruct w
+from challenge-response pairs (CRPs).
+
+To amplify structural non-linearity, the x-XOR APUF
+combines x parallel APUFs via an x-input XOR gate. Its
+mathematical model is given by:
+(cid:32) x
+(cid:89)
+
+(cid:33)
+
+fxor = sign
+
+wT
+i
+
+· Φ
+
+= sign
+
+i=1
+(cid:32) x
+
+(cid:79)
+
+x
+(cid:79)
+
+wi ·
+
+i=1
+
+i=1
+
+(cid:33)
+
+Φ
+
+= sign (wxor · Φxor)
+
+where wxor, Φxor ∈ R(n+1)x
+. Standard ML frameworks
+scale exponentially with component size x [14]–[17], re-
+
+(2)
+
+B. Taxonomy and Limitations of Current Pentesting
+
+Building upon these hardware configurations, Table I sys-
+tematically differentiates representative security verification
+approaches across the three fundamental design dimensions
+established in this work. Contemporary hardware pentesting
+
+𝑐[0]……𝒓Arbiter𝑐[1]𝑐[n−2]𝑐[n−1]𝐸𝑛𝑎𝑏𝑙𝑒𝑐=1𝑐=0methods broadly cluster into three major paradigm axes,
+alongside emerging high-level automated agents.
+(i) Linear Modeling refers to pentests that mainly lever-
+age logistic regression (LR) [13], [14] or its optimization
+derivatives [15]. This approach exploits the linear additive
+delay (LAD) physical prior of arbiter-based circuits via
+mathematical optimization over the parity space. While
+it demonstrates favorable parameter economy because of
+its compact modeling formulation, its pentesting efficacy
+degrades catastrophically in data-starved regimes (i.e., under
+query limits) as compositional complexity increases. In
+addition, linear modeling offers limited robustness across
+complex architectural variants.
+(ii) Connectionist approaches are pentests that use neural
+networks to approximate hardware boundaries without re-
+lying on explicit physical layout priors [16], [17]. Because
+neural networks are architecture-agnostic models concerned
+only with the target’s input-output relationship, they are
+they typi-
+applicable to diverse PUF designs. However,
+cally require large parameter configurations and prolonged
+backpropagation, severely compromising sample and latency
+efficiency under rigid query constraints.
+(iii) Tensor Modeling maps higher-order chain interactions
+into multi-dimensional low-rank tensors, offering a data-
+efficient strategy to operate within tight query budgets [18].
+While this representation boosts evaluation speed, existing
+CP-based tensor factorization schemes scale unfavorably as
+hardware complexity grows. In particular, expanding the
+XOR-APUF composition size (the number of APUFs) leads
+to severe parameter hyper-inflation.
+
+Emerging automation overlays, including Heuristic LLM
+Prompting and Agentic Reinforcement Learning (RL), wrap
+high-level decision loops around these existing evaluation
+engines. However, these approaches overlook the underlying
+hardware structure and component organization. Without
+first collapsing this structural complexity, high-level automa-
+tion gets bogged down by sparse reward signals and massive
+search spaces. Consequently, such assistance degrades into
+inefficient trial-and-error under strict query starvation.
+
+In sharp contrast, TENAX represents a paradigm shift as
+the only framework that simultaneously achieves structural
+parameter economy, an optimal data-latency auditing trade-
+off, and broad architectural generality across XOR APUFs,
+iPUFs, LSPUFs, and their hardware FPGA implementations.
+
+C. Inadequacy of Generic LLMs
+
+To further illustrate the limitation of naive LLM prompting,
+we run an experiment on the 64 4 XOR APUF dataset
+using a 50/50 train-validation split. In this experiment,
+“naive LLM” is operationalized as a prompt-only predictor
+that has access only to the training label prior, without
+any architecture-aware learning mechanism or PUF-specific
+parameterization. The training split contains 28 zeros and
+22 ones, so the baseline predicts the majority response for
+all validation samples. The resulting validation accuracy is
+only 44.00%, with 28 mismatched predictions out of 50 val-
+idation samples. The corresponding heatmap, visualizes the
+validation challenges, the predicted responses, the ground-
+
+Fig. 2: Validation heatmap for the naive LLM baseline (GPT-
+5.3-Codex) on the 64 4 XOR APUF dataset with a 50/50 train-
+validation split. From left to right, the figure shows the validation
+challenges (converted to parity vectors), the predicted responses,
+the ground-truth responses, and the mismatch map. The large
+number of mismatches highlights that naive prompt-only LLM
+prediction cannot capture the hidden PUF response function.
+
+truth responses, and their mismatches. This result supports
+our claim that naive LLM prompting cannot provide accurate
+PUF prediction, because it lacks access to the hidden device-
+specific delay structure that must be learned by a dedicated
+modeling architecture like TENAX.
+
+III. Constrained Characterization Setup
+
+To establish a realistic security baseline for embedded hard-
+ware roots of trust, we formalize a query-constrained eval-
+uation framework that reflects actual deployment conditions
+in edge IoT systems.
+
+A. Threat Model and Grey-Box Assumption
+
+Unlike unconstrained machine learning (ML) setups, we
+consider a non-invasive grey-box evaluation scenario. In
+practical IoT ecosystems, an adversary or security auditor
+can acquire off-the-shelf target devices via commercial chan-
+nels and perform standard non-invasive reverse engineering
+(e.g., board teardown or architectural inspection). Conse-
+quently, high-level structural parameters, such as the number
+of constituent APUF chains x and the challenge bit-width
+n, are assumed to be publicly known. This assumption is
+also consistent with the mainstream PUF modeling methods
+compared in Section V.
+
+However, fine-grained physical fingerprints, such as in-
+dividual stage propagation delays and silicon-level manufac-
+turing variation offsets, remain strictly unknown and unob-
+servable. Furthermore, characterization must be conducted
+non-invasively through standard physical interfaces without
+layout modification, or
+internal silicon probing, physical
+thermal/voltage fault
+injection. Such destructive physical
+measures are excluded from our evaluation framework.
+Destruction of PUF chips violates basic attack economics
+in IoT scenarios. More importantly, because each silicon
+instance possesses a unique, uncloneable hardware signature,
+
+physically destroying or extracting data from one target chip
+provides zero transferable utility for attacking other devices
+in the same fleet.
+
+Finally, we evaluate characterization performed over di-
+rect, raw CRP interfaces. Heavy cryptographic masking
+layers and public-key challenge obfuscation mechanisms
+are deliberately excluded from our scope. Such advanced
+countermeasures incur non-negligible area and energy over-
+heads that are often unaffordable for strictly constrained
+edge IoT nodes. Therefore, this work focuses on auditing
+the intrinsic, unmasked physical security baseline of the
+hardware primitive itself.
+
+B. Query-Constrained Pentesting
+
+To model practical security verification without triggering
+device lockout, the characterization workflow operates under
+four operational constraints:
+
+• Query Starvation (Dauth ≪ Dbudget): On-device rate-
+limiting and query control mechanisms restrict total
+CRP acquisition to a strictly bounded budget Dbudget,
+mimicking real-world authentication rate caps.
+
+• Response-Only Supervision: Evaluators can only ob-
+serve binary output pairs (Ci, Ri). No auxiliary side-
+channel signals, analog timing traces, or multi-query
+reliability statistics are accessible.
+
+• Practical Success Threshold (ϵtol): Because practical
+authentication protocols employ fuzzy matching to ac-
+commodate environmental noise, successful character-
+ization requires constructing an estimator ˆf achieving
+accuracy Acc( ˆf ) ≥ 1 − ϵtol, rather than exact 100%
+parameter cloning.
+
+• Strict Zero-Oracle Auditing: To prevent evaluation
+leakage, once the budget Dbudget
+is collected, all
+model synthesis, hyperparameter tuning, and conver-
+gence checks must rely strictly on self-contained op-
+timization within Dbudget, completely blind to external
+validation oracles or post-hoc querying.
+
+IV. Proposed Pentesting Framework
+
+A. Architecture and Workflow
+
+Fig. 3 illustrates the end-to-end workflow of TENAX from
+a Red Team penetration testing perspective. Given an input
+binary challenge, TENAX builds a unified PCA-expanded
+feature domain. All subsequent tensor regression operations
+are defined over this feature domain. The weight tensor
+corresponding to expanded features is factorized into a set
+of lightweight TT core tensors. Each core tensor undergoes
+mode-2 contraction against the PCA-expanded input features
+to yield intermediate matrices, and sequential matrix multi-
+plication across all cores approximates the required tensor
+inner product. Finally, the resulting value is combined with
+a learnable bias and passed through a sigmoid activation,
+allowing the Red Team to output the predicted PUF response
+during penetration assessment.
+
+The proposed framework structurally resolves the three
+core technical bottlenecks outlined in Section I through three
+tightly coupled design principles of TENAX:
+
+(1) Tensor-Train Core Factorization (for Issue 1: Parameter
+Hyper-Inflation): To eliminate parameter explosion in multi-
+chain targets, TENAX factorizes the ultra-high-dimensional
+weight tensor into a linear chain of low-rank third-order core
+tensors. This structural factorization collapses the parameter
+representation complexity from an exponential scale down
+to a strict polynomial bound O(nx2a+1), fundamentally
+suppressing overfitting risks and removing optimization bot-
+tlenecks under data-starved regimes.
+(2) Expanded Feature Synergy (for Issue 2: Efficiency vs.
+Fidelity Boundary): To break the sample-efficiency deadlock
+under severe query constraints, TENAX natively executes
+all Tensor-Train core contractions within a PCA-expanded
+parity feature domain. Rather than treating feature prepro-
+cessing and tensor regression as decoupled operations, this
+continuous feature-space integration drastically maximizes
+information extraction per CRP, enabling ultra-low sample
+consumption and accelerated convergence while retaining
+near-optimal characterization fidelity.
+(3) Unified Multi-Architecture Assessment (for Issue 3:
+Restricted Versatility): To bridge heterogeneous hardware
+defense paradigms, TENAX is engineered as a single,
+architecture-agnostic evaluation engine. By unifying cross-
+chain interaction modeling into a flexible tensor contraction
+interface,
+the framework seamlessly accommodates non-
+linear compositions (XOR APUFs, iPUFs), obfuscated chal-
+lenges (LSPUFs), and physical process variability in silicon
+FPGAs without requiring design-specific architectural mod-
+ifications.
+
+B. Characterizing PUFs using Tensors
+
+To systematically capture the multi-dimensional, non-linear
+challenge interactions within compositional PUF architec-
+tures without inducing a catastrophic parameter explosion,
+TENAX operates natively within the higher-order tensor
+domain. This section establishes the formal mathematical
+foundations and tensor regression formulations that underpin
+our unified vulnerability assessment framework.
+
+1) Structural Notation and Tensor Operations: Within
+our mathematical framework, a first-order tensor is repre-
+sented as a vector v (bold lowercase), a second-order tensor
+as a matrix M (bold uppercase), and tensors of order three or
+higher are denoted by calligraphic letters X . To manipulate
+these high-dimensional spaces during security evaluations,
+we define three primary structural operations:
+
+• Tensor Unfolding: Given an N -order weight or feature
+tensor X ∈ RI1×I2×···×IN , its mode-n unfolding (or
+matricization) yields a flattened matrix X[n] ∈ RIn×IM ,
+where IM = (cid:81)N
+k=1,k̸=n Ik. This operation projects
+multi-chain hardware characteristics into manageable
+linear subspaces.
+
+• n-Mode Product: The contraction between an N -order
+tensor X and a transformation matrix M ∈ RR×In
+along mode-n outputs a modified tensor of shape (I1 ×
+· · · × In−1 × R × In+1 × · · · × IN ), formalizing the
+
+Fig. 3: Architecture of the proposed TENAX (tensor-train decomposition enhanced network modeling) for an example of 3-XOR APUFs.
+
+layer-wise propagation of delay features:
+
+multiplication chain yields the structural contraction:
+
+X ×n M = MX[n] ∈ RI1×···×In−1×R×In+1×···×IN .
+(4)
+• Inner Product Boundary: For two structural tensors X
+and Y sharing identical dimensions, their inner product
+quantifies the alignment between the target hardware
+configurations and the learned predictive representa-
+tions:
+
+⟨X , Y⟩ =
+
+(cid:88)
+
+i1,i2,...,iN
+
+Xi1,i2,...,iN · Yi1,i2,...,iN .
+
+(5)
+
+2) Tensor Train Factorization for Parameter Compres-
+sion: A critical bottleneck in characterizing high-order
+XOR-based extensions is the exponential growth of the
+parameter space. To bypass this curse of dimensionality
+entirely within a single, unified framework, TENAX lever-
+ages Tensor Train (TT) factorization [27] to factorize the
+expansive regression weight tensor. Instead of attempting a
+full-rank estimation, the N -order tensor X ∈ RI1×I2×···×IN
+is compressed non-recursively into a sequence of N third-
+order core tensors, denoted as G(k) ∈ RRk−1×Ik×Rk :
+
+Xi1,i2,...,iN ≈ G(1)
+
+:,i1,: × G(2)
+
+:,i2,: × · · · × G(N )
+
+:,iN ,:,
+
+(6)
+
+where G(k)
+:,ik,: represents a canonical Rk−1 × Rk matrix slice
+of the k-th core tensor at index ik. Expanding this matrix
+
+Xi1,i2,...,iN ≈
+
+(cid:88)
+
+G(1)
+
+α0,i1,α1
+
+G(2)
+
+α1,i2,α2
+
+· · · G(N )
+
+αN −1,iN ,αN
+
+,
+
+α0,α1,...,αN
+
+(7)
+where the virtual indices αk = 1, 2, . . . , Rk act as low-
+rank tensor bridges between adjacent cores. Crucially, the
+boundary constraints R0 = RN = 1 ensure that the total
+parameters scale polynomially rather than exponentially,
+aligning perfectly with the tight data budgets required by
+our practical threat model.
+
+3) The Evolution of Tensor Regression Frameworks in
+Security Testing: Differentiable Tensor Regression Net-
+works (TRNs)
+inherently capture multilinear dependen-
+cies by structure-preserving contractions through a Tensor
+Contraction Layer (TCL) and a Tensor Regression Layer
+(TRL) [22], [23]. In the context of hardware security testing,
+prior state-of-the-art evaluation frameworks, such as CP-
+based tensor [18], utilized CANDECOMP/PARAFAC (CP)
+decomposition to approximate the TRL weight tensor as
+a sum of rank-one components. While CP decomposition
+allows efficient inner-product computation without explicitly
+reconstructing the full tensor, it suffers from severe algo-
+rithmic instabilities. The low-rank approximation problem is
+ill-posed for orders greater than two, causing optimization
+routines to fluctuate or collapse when data is scarce.
+
+To establish a more robust, sample-efficient vulnerabil-
+ity assessment primitive, TENAX breaks away from this
+fragmented paradigm. Instead of treating feature prepro-
+cessing and tensor factorization as disconnected, ad-hoc
+tuning stages, TENAX re-architects the regression layer by
+utilizing the numerically stable and structurally compact
+TT-factorization directly over a unified, feature-expanded
+domain. This holistic design preserves the full expres-
+sive power of the cross-chain delay terms while drasti-
+cally shrinking the required training sample footprint, en-
+abling stable optimization under strict zero-oracle verifica-
+tion boundaries.
+
+The macroscopic objective of our tensor-based pentest is
+
+to learn a tensor W and a scalar bias term b ∈ R,
+
+f (X ) = ⟨W, X ⟩ + b
+
+(8)
+
+This formulation generalizes Eq. (2) and can be applied to
+model XOR APUFs and similar PUF architectures.
+
+C. Structural Parity-Space Feature Expansion
+
+We adopt the following notations and their corresponding
+meanings throughout this work. An n-bit challenge is first
+transformed into an (n + 1)-bit parity vector Φ according
+to (1). Subsequently, Φ undergoes x Kronecker products to
+yield the vector Φxor = (cid:78)x
+i=1 Φ. Similarly, the (n + 1)-
+bit weight vectors wi of the x APUFs to be modeled are
+combined through x Kronecker products, resulting in wxor =
+(cid:78)x
+
+i=1 wi.
+The two vectors wxor and Φxor, both of length (n + 1)x,
+are reshaped into two x-order tensors, denoted as W and
+X , respectively. The inner product between these tensors,
+⟨W, X ⟩, is used to replace the original dot product wxor ·
+Φxor. Specifically,
+
+X = Φxor ∈ R(cid:81)x
+
+k=1(n+1)
+
+W = wxor ∈ R(cid:81)x
+
+k=1(n+1)
+
+(9)
+
+(10)
+
+Computing the inner product between two general high-
+order tensors incurs exponential complexity, however. To
+address this, [18] proposes applying the CP decomposition
+to approximate the tensor W = wxor as a sum of rank-
+one tensors, where each rank-one tensor is represented as
+an outer product of vectors. In contrast, X is inherently a
+rank-one tensor. Under this representation, the inner product
+⟨W, X ⟩ can be computed efficiently through a feasible and
+scalable approach.
+
+Unlike CP decomposition, the TT factorization does not
+express W as a sum of rank-one tensors. Instead, it supports
+an efficient and tractable computation of the inner product
+⟨W, X ⟩ without explicitly reconstructing either W or X .
+The derivation is as follows:
+
+Wi1,i2,...,ix ≈
+
+(cid:88)
+
+α0,α1,...,αx
+
+G(1)
+
+α0,i1,α1
+
+G(2)
+
+α1,i2,α2
+
+· · · G(x)
+
+αx−1,ix,αx
+
+Xi1,i2,...,ix = Φi1 Φi2 · · · Φix
+
+(11)
+
+(12)
+
+⟨W, X ⟩ =
+
+(cid:88)
+
+Wi1,i2,...,ix Xi1,i2,...,ix
+
+≈
+
+=
+
+=
+
+i1,i2,...,ix
+(cid:88)
+
+(cid:88)
+
+(cid:16)
+
+G(1)
+
+α0,i1,α1
+
+G(2)
+
+α1,i2,α2
+
+· · ·
+
+(cid:17)
+
+α0,...,αx
+
+i1,...,ix
+(cid:16)
+
+· · ·
+
+G(x)
+
+αx−1,ix,αx
+
+(cid:17)
+
+(Φi1 · · · Φix )
+
+(cid:88)
+
+x
+(cid:89)
+
+(cid:32)
+
+(cid:88)
+
+(cid:33)
+
+G(k)
+
+αk−1,ik,αk
+
+Φik
+
+α0,...,αx
+
+(cid:88)
+
+k=1
+x
+(cid:89)
+
+(cid:16)
+
+ik
+
+(cid:17)
+
+M(k)
+
+αk−1,αk
+
+α0,...,αx
+
+k=1
+
+= M(1) × M(2) × · · · × M(x)
+
+(13)
+
+Here, M(k) ∈ RRk−1×Rk is obtained by contracting the
+k-th TT core tensor G(k) ∈ RRk−1×(n+1)×Rk with the parity
+vector Φ ∈ Rn+1 along its second mode, i.e.,
+
+(14)
+
+M(k) = G(k) ×2 Φ.
+In TENAX, we first contract each core tensor G(k) with
+the parity vector Φ to obtain the corresponding matrix M(k)
+and then compute the inner product between W and X
+through matrix chain multiplication. This process avoids
+reconstructing the full tensors W or X , yielding substan-
+tial improvements in both computational time and memory
+usage. Fig. 3 illustrates a TRN constructed in this manner
+to model a 3-XOR APUF. The input to the TRN is the
+parity vector Φ derived from the challenge, the output is the
+predicted probability that the response is 1, and the trainable
+parameters include three core tensors G(k), k = 1, 2, 3, along
+with two scalars, O and b.
+
+We adopt a native PCA feature expansion transformation
+for raw parity vectors as an inherent component of our
+tensor-train evaluation pipeline. This linear mapping expands
+the dimension of each parity feature without consuming
+extra CRP samples and yields richer feature representations
+to boost modeling performance. Under our unified pipeline,
+the original parity vector Φ ∈ R(n+1)
+is extended to
+Φpca ∈ R2(n+1) via PCA. Consequently, the input tensor
+changes from X = Φxor ∈ R(cid:81)x
+xor ∈
+R(cid:81)x
+k=1 2(n+1). In parallel, each TT core tensor G(k) ∈
+RRk−1×(n+1)×Rk is replaced by G(k)
+pca ∈ RRk−1×2(n+1)×Rk
+to accommodate the expanded input dimensions. The TT
+factorization is then applied to the PCA-extended weight
+tensor W pca ∈ R(cid:81)x
+k=1(2(n+1)), instead of the original weight
+tensor W ∈ R(cid:81)x
+k=1(n+1). The inner product ⟨W pca, X pca⟩
+can be efficiently computed using the same approach illus-
+trated in Fig. 3.
+
+k=1(n+1) to X pca = Φpca
+
+D. Tensor-Train Core Contraction and Security Bound-
+ary Optimization
+
+In TENAX, the trainable parameters include the TT core ten-
+sors G(k)
+pca ∈ RRk−1×2(n+1)×Rk , an output control parameter
+O, and a bias term b. For XOR APUFs, O is a scalar. We
+now analyze the theoretical relationship between the number
+of trainable parameters in TENAX and the XOR-ed size x.
+Theorem 1: Let (R0, R1, . . . , Rx) be the TT-ranks of
+the approximate weight tensor in the n-bit x-XOR APUFs
+
+modeling problem, and let Rmax = max {R0, R1, . . . , Rx}.
+If the TT factorization is implemented with Rmax = O(xa)
+for some positive real constant a,
+then the number of
+trainable parameters in TENAX grows polynomially with
+respect to x.
+
+Proof: For an n-bit x-XOR APUF, the trainable param-
+eters in TENAX consist of the TT core tensors G(k)
+pca ∈
+RRk−1×2(n+1)×Rk for k = 1, 2, . . . , x, as well as a scalar
+output control parameter O and a bias term b.
+The total number of parameters is given by:
+(cid:32) x
+(cid:88)
+
+(cid:33)
+
+2(n + 1)
+
+Rk−1Rk
+
++ 2.
+
+Since Rmax = O(xa), we have:
+
+k=1
+
+x
+(cid:88)
+
+k=1
+
+Rk−1Rk ≤ xR2
+
+max = O(x2a+1),
+
+and thus the total number of trainable parameters is:
+
+O(2nx2a+1),
+
+which implies a polynomial dependency on x.
+
+Extensive experimental results demonstrate that TENAX
+maintains bounded, low-dimensional TT-rank configurations
+for all
+tested PUF benchmarks. Across every evaluated
+architecture, the framework only requires modest rank values
+to capture the PUF’s nonlinear response behavior. These
+minimal TT-rank budgets support stable, high-fidelity char-
+acterization while keeping the overall parameter footprint
+compact. For example, when modeling a 64-bit 8-XOR
+APUF with only 2.7 million CRPs, a TT-ranks configura-
+tion of (1, 1, 1, 1, 1, 1, 1, 1, 1) suffices. The most complex
+case in our experiments involves modeling a 128-bit 7-
+XOR APUF using 20M CRPs, where the TT-ranks are
+(1, 1, 1, 7, 7, 7, 1, 1) and Rmax = 7. Under this configuration,
+existing CP-based tensor modeling [18] and TENAX require
+1,356,000 and 29,672 trainable parameters, respectively.
+These results suggest that TT factorization has strong ex-
+pressive capacity, indicating that W pca is highly compress-
+ible. Compared with CP decomposition, TT-based modeling
+requires significantly fewer learnable parameters for XOR
+APUFs of similar scale. Consequently, TENAX achieves
+superior performance over CP-Tensor in both modeling
+accuracy and spatiotemporal efficiency.
+
+Tucker decomposition, as another commonly used ten-
+sor computation method, represents a high-order tensor
+X = Φxor ∈ R(cid:81)x
+k=1(n+1) as the product of a core tensor
+H ∈ R(cid:81)x
+k=1 Lk , Lk ≤ (n + 1) with the same order as X ,
+and x factor matrices U (k) ∈ R(n+1)×Lk . Here, H can be
+regarded as a compressed version of X , where the k-th mode
+dimension is reduced from (n + 1) to Lk. When applying
+Tucker decomposition for modeling, both H and U (k) are
+learnable parameters.
+
+Theorem 2: Let the tuple (L1, L2, . . . , Lx) denote the
+Tucker rank, which determines the shape of H. Define
+Lmin = min{L1, L2, . . . , Lx}. If Tucker decomposition is
+carried out with Lmin = O(na), where a is a positive real
+
+number, then the number of learnable parameters depends
+exponentially on the XOR size x.
+
+k=1 Lk ≥ (cid:81)x
+
+Proof: Consider only the number of parameters in the
+core tensor H ∈ R(cid:81)x
+k=1 Lk , Lk ≤ (n + 1). The lower
+bound satisfies (cid:81)x
+k=1 Lmin = O(nax). Thus,
+the parameter count grows exponentially with respect to x.
+We now discuss the landscape of tensor-based vul-
+nerability assessment. Tensor-based data analytics have
+recently emerged as a highly promising paradigm for hard-
+ware security evaluation. Unlike flattened machine learning
+approaches that destroy structural alignment, tensor methods
+intrinsically preserve the high-dimensional spatial and multi-
+chain correlations inherent in compositional PUF architec-
+tures.
+
+Fundamentally, the technical spectrum of tensor analyt-
+ics branches into two primary methodologies: CANDE-
+COMP/PARAFAC (CP) decomposition and Tucker decom-
+position. Due to its strict component uniqueness and high
+interpretability under mild conditions, CP decomposition is
+exceptionally suited for unsupervised pattern mining and
+feature clustering. Consequently, prior hardware evaluation
+frameworks, such as CP-based tensor modling [18], have
+exclusively embraced the CP route.
+
+Conversely, for generic Tucker decomposition, despite its
+unparalleled data compression capacity, precise approxima-
+tion control, and mathematical quasi-optimality (where re-
+construction errors closely match the theoretical minimum),
+it has been historically dismissed in hardware testing. As
+formalised in Theorem 2, generic Tucker suffers from a
+catastrophic curse of dimensionality because the parameter
+volume of its monolithic core tensor scales exponentially
+with the number of PUF chains. This limitation becomes
+glaringly evident with concrete empirical values: when eval-
+uating a standard 64-bit 8-XOR APUF with a target rank
+Lmin = O(640.5) = 8, generic Tucker demands a colossal
+core tensor requiring at least 88 ≈ 16.7 million learnable
+variables, rendering it entirely unviable under tight query
+constraints.
+
+To break this methodological deadlock, TENAX intro-
+duces a paradigm shift by pivoting to Tensor-Train (TT)
+factorization, which is mathematically categorized as a spe-
+cialized hierarchical branch of the Tucker lineage [28], [29].
+TT factorization perfectly reconciles this conflict by inher-
+iting the best of both worlds: it retains Tucker’s exceptional
+data compression, controlled precision, and quasi-optimality,
+yet completely neutralizes the parameter explosion by fac-
+torizing the monolithic core into a chain of low-rank, third-
+order core tensors. This structural mutation collapses the
+storage and parameter complexity from an exponential
+scale to a strictly linear scale, making it uniquely suited
+for representing ultra-high-dimensional physical delay vari-
+ations. Under the identical 64-bit 8-XOR configuration, CP-
+based tensor modeling requires 364,700 trainable variables,
+whereas TT-based TENAX uses only 1,042. Thus, TENAX
+successfully unleashes the latent structural power of Tucker-
+based optimization within a highly compact, sample-efficient
+evaluation framework.
+
+V. Experimental Results
+
+We evaluate TENAX across representative strong PUF archi-
+tectures, including XOR APUFs, iPUFs, LSPUFs, and phys-
+ical silicon FPGA implementations, benchmarking against
+SOTA penetration baselines. All experiments are conducted
+on a server with 3.30 GHz CPUs, 125 GB RAM, and an
+NVIDIA RTX 5000 GPU running Ubuntu 18.04.4 LTS,
+implemented in Python via TensorFlow [30].
+
+TENAX adopts the architecture shown in Fig. 3, config-
+ured with Xavier Uniform weight initialization [31], zero
+bias initialization, the Adam optimizer [32], binary cross-
+entropy loss, and Sigmoid activation. L2 regularization and
+dropout are applied to mitigate overfitting during backprop-
+agation training [33].
+
+For simulation setups, stage delay parameters are inde-
+pendently sampled from a Gaussian distribution N (0.1, 1)
+following established protocols [3], [4], [18]. To emulate
+real-world operational noise, an additive Gaussian noise term
+N (0, 0.01) is applied to each stage delay.
+
+To ensure rigorous comparison against prior pentesting
+methods [3], [4], [6], [18]–[20], all algorithms are evaluated
+over strictly identical datasets sampled from a pre-generated
+ground-truth CRP pool per configuration. Controlled factors
+span noise distributions, dataset splits, and evaluation met-
+rics, guaranteeing that observed performance differentials
+arise purely from algorithmic representation efficiency rather
+than data variations.
+
+To ensure fair comparison against established hardware
+security evaluation approach [18], CRP datasets are parti-
+tioned into an 80%-20% split between training and evalu-
+ation sets by default. However, under extreme penetration
+scenarios requiring massive CRP volumes, such as Linear
+Modeling on a 128-bit 7-XOR APUF requiring 4 × 108
+CRPs, a rigid 20% test ratio yields an oversized evaluation
+set (> 108 CRPs), inducing prohibitive memory overhead.
+To maintain computational tractability while preserving sta-
+tistical integrity, we adaptively adopt a 99%–1% split in
+these high-volume regimes. Because the resulting evaluation
+set still encompasses over 4 × 106 CRPs, statistical confi-
+dence is fully maintained without memory bottlenecks.
+
+A. Ablation Study: Synergy of PCA Expansion and
+Tensor-Train Space
+
+We conduct ablation experiments to quantify the mathemat-
+ical synergy between Tensor-Train (TT) factorization and
+the PCA-expanded parity domain native to TENAX. Specif-
+ically, we evaluate two structural configurations: a baseline
+TT-only model that executes tensor operations directly over
+raw, untransformed parity inputs, and the complete TENAX
+framework where tensor contractions are performed within
+the PCA-expanded parity space.
+
+The baseline TT-only variant restricts all tensor operations
+to original parity vectors. In contrast, TENAX natively
+couples PCA feature expansion into the TT contraction
+kernel, defining every core contraction and matrix multipli-
+cation exclusively over this transformed feature space. We
+benchmark both variants on representative XOR APUF and
+
+Fig. 4: Ablation comparison between TENAX and TT-only mod-
+eling on XOR APUFs and iPUFs. Bars report the mean modeling
+accuracy over 10 repeated experiments, and red error bars indicate
+standard deviations.
+
+iPUF setups: 64-bit 5-XOR APUF, 128-bit 4-XOR APUF,
+64-bit (1,5)-iPUF, and 128-bit (1,4)-iPUF, with CRP budgets
+of 80k, 60k, 150k, and 200k, respectively. Each experimental
+setup runs for ten independent trials, and we report the mean
+prediction accuracy alongside standard deviation values.
+
+Fig. 4 shows that TENAX achieves accuracies of 98.28%
+and 98.32% on the 64-bit 5-XOR and 128-bit 4-XOR
+APUFs, compared with 96.51% and 96.54% for TT-only.
+On the 64-bit (1,5)-iPUF and 128-bit (1,4)-iPUF, TENAX
+reaches 98.18% and 98.25%, whereas TT-only reaches
+96.26% and 96.37%. This gap demonstrates that lightweight
+TT factorization alone struggles to fully capture complex
+parity interactions without domain expansion. Furthermore,
+the noticeably narrower error bars for TENAX confirm
+that executing tensor contractions within the PCA-expanded
+domain yields superior optimization stability across repeated
+training runs.
+
+This performance uplift carries vital practical significance
+for Red Team penetration testing. While practical fuzzy
+authentication tolerates minor prediction gaps, operational
+device noise establishes a strict error margin ϵtol (Sec-
+tion III-B). The ∼96.3% accuracy yielded by TT-only hovers
+precariously near this boundary, risking pentesting failure
+under realistic physical noise. In contrast, the ∼1.8% uplift
+provided by TENAX in this saturated 95-99% regime [15]
+[18] comfortably elevates the surrogate model beyond the
+1 − ϵtol
+threshold, guaranteeing deterministic penetration
+success without requiring additional CRP probing budgets.
+
+The consistent superiority of TENAX confirms that its
+PCA-expanded tensor domain acts as an indispensable
+structural catalyst rather than a decoupled pre-processing
+step. Feature expansion eases the representation pressure on
+compact TT cores. Based on this clear precision and stability
+advantage, we adopt the full TENAX model in the remainder
+of our experiments.
+
+64-bit5-XOR128-bit4-XOR9596979899Accuracy (%)98.2898.3296.5196.54(a) XOR APUF64-bit(1,5)-iPUF128-bit(1,4)-iPUF98.1898.2596.2696.37(b) iPUFTENAXW/O Expanded FeaturesB. Modeling Evaluation on XOR APUFs
+
+To evaluate TENAX under realistic Red Team penetration
+scenarios, where physical probing (modeling training) time
+and CRP query budgets are strictly constrained, we establish
+a rigorous hardware benchmarking suite across heteroge-
+neous PUF architectures. The baselines are representative
+pentesting paradigms as shown in Table I, include Linear
+Modeling [6] [15], CP-Tensor Modeling [18], and deep
+learning-powered Connectionist [16], [17]. The Connection-
+ist baseline is evaluated using the pypuf library provided
+in [17], [34]. Linear Modeling and CP-Tensor are evaluated
+using the publicly available source code released in [15] and
+[18], respectively. For CP-tensor modeling, we follow the ex-
+act hyperparameter settings reported in [18]; if no successful
+modeling is achieved after 20 trials, minor hyperparameter
+tuning is applied. To ensure generality, experiments are
+performed on 64-bit, 128-bit, and 256-bit XOR APUFs,
+with the most challenging configurations being 64-bit 8-
+XOR, 128-bit 7-XOR, and 256-bit 5-XOR. The results are
+summarized in Table II.
+
+Table II and Fig. 5 show that TENAX consistently pro-
+vides a balance among accuracy, sample complexity, and
+runtime. In Table II, TIMEOUT indicates that an experiment
+ran for more than one month without completion. Linear
+Modeling attains good accuracy because it explicitly exploits
+the mathematical structure of XOR APUFs. However, its
+required amount of CRPs grows rapidly in larger configu-
+rations. Connectionist becomes more competitive for large
+XOR sizes due to its stronger representation capability [17],
+but it still generally requires more data than TENAX. CP-
+Tensor uses relatively few CRPs among the baselines, yet its
+accuracy is consistently lower than that of TENAX and its
+runtime increases sharply as the XOR size grows. Overall,
+TENAX matches or approaches the best accuracy while
+using far fewer CRPs and substantially less training time
+in the most challenging configurations.
+
+Note near-optimal accuracy is functionally equivalent
+to complete cloning in practice. Although TENAX has
+marginally lower accuracy than Linear Modeling in a few
+configurations, Huang et al. [38] show that such differences
+are well within the error tolerance of the subsequent de-
+vice authentication protocol and therefore do not materially
+affect practical authentication. As formally established in
+Section III-B, practical hardware authentication mechanisms
+inherently incorporate fuzzy matching thresholds to absorb
+environmental operational noise. Consequently, an effective
+penetration characterization does not require exact 100%
+parameter cloning; it suffices to construct a surrogate es-
+timator ˆf satisfying Acc( ˆf ) ≥ 1 − ϵtol to breach real-world
+authentication.
+
+To better illustrate this performance gap, we examine the
+number of trainable parameters used by the two tensor-
+regression-based pentests. Table III compares the trainable-
+parameter counts of CP-Tensor and TENAX on the evaluated
+XOR APUF configurations. As summarized in Table III,
+scaling the XOR complexity triggers an explosion in param-
+eter complexity for traditional CP-based tensor modeling,
+
+TABLE II: Comparison of TENAX, CP-Tensor [18], Linear Mod-
+eling [13], [14], [34], and Connectionist [16], [17], [34] schemes
+on multiple n-bit x-XOR APUFs.
+
+n
+
+x
+
+4
+
+5
+
+64
+
+6
+
+7
+
+8
+
+4
+
+5
+
+6
+
+7
+
+4
+
+5
+
+128
+
+256
+
+Evaluation
+Scheme
+TENAX
+CP-Tensor Modeling
+Linear Modeling
+Connectionist
+TENAX
+CP-Tensor Modeling
+Linear Modeling
+Connectionist
+TENAX
+CP-Tensor Modeling
+Linear Modeling
+Connectionist
+TENAX
+CP-Tensor Modeling
+Linear Modeling
+Connectionist
+TENAX
+CP-Tensor Modeling
+Linear Modeling
+Connectionist
+TENAX
+CP-Tensor Modeling
+Linear Modeling
+Connectionist
+TENAX
+CP- Tensor Modeling
+Linear Modeling
+Connectionist
+TENAX
+CP-Tensor Modeling
+Linear Modeling
+Connectionist
+TENAX
+CP-Tensor Modeling
+Linear Modeling
+Connectionist
+TENAX
+CP-Tensor Modeling
+Linear Modeling
+Connectionist
+TENAX
+CP-Tensor Modeling
+Linear Modeling
+Connectionist
+
+Dbudget Runtime
+
+Acc.(%)
+
+98.48
+96.12
+97.28
+96.08
+98.06
+94.81
+97.82
+97.01
+97.80
+95.30
+97.69
+97.24
+97.12
+93.36
+97.77
+97.21
+97.30
+94.55
+97.55
+97.26
+97.85
+94.64
+97.36
+97.22
+97.79
+94.08
+97.43
+97.20
+97.56
+93.39
+97.92
+97.37
+97.29
+
+24s
+42s
+30.6s
+2.00m
+1.19m
+1.68m
+1.02m
+2.20m
+4.76m
+3.97m
+10.30m
+13.18m
+7.95m
+5.27h
+40.85m
+56.66m
+46.76m
+25.69h
+4.43h
+3.02h
+58.8s
+1.67m
+1.42m
+4.03m
+13.47m
+16.73m
+29.75m
+40.00m
+47.73m
+51.30m
+3.90h
+3.93h
+6.61h
+
+10k
+40k
+40k
+60k
+40k
+80k
+80k
+80k
+240k
+320k
+1M
+1M
+400k
+560k
+4M
+4M
+2.4M
+2.7M
+30M
+30M
+30k
+60k
+120k
+180k
+400k
+400k
+1.6M
+1.6M
+1.2M
+1.2M
+14M
+14M
+20M
+20M TIMEOUT TIMEOUT
+400M 196.77h
+60M
+150k
+200k
+800k
+1.2M
+1.5M
+2M
+16M
+16M
+
+7.77h
+9.86m
+10.82m
+15.08m
+16.76m
+1.66h
+1.82h
+5.08h
+9.75h
+
+97.79
+97.66
+97.43
+93.81
+97.43
+97.36
+97.84
+94.87
+97.72
+97.75
+
+reaching 364, 700 and 1, 356, 000 parameters on the 64-
+bit 8-XOR and 128-bit 7-XOR APUFs. In stark contrast,
+TENAX suppresses the parameter footprint by two to three
+orders of magnitude (to just 1, 042 and 29, 672 parameters,
+respectively). This dramatic reduction eliminates parameter
+redundancy, preventing optimization overfitting during Red
+Team penetration testing under data-starved CRP constraints.
+This difference results in markedly smaller model sizes and
+faster training for TENAX. Moreover, as the scale of a neural
+network increases while keeping the training set size fixed,
+the model becomes more prone to overfitting, leading to
+reduced generalization ability. That is, it may achieve higher
+accuracy on the training set but worse performance on the
+test set. Benefiting from the strong representational capacity
+of the TT factorization, TENAX is capable of modeling
+
+Fig. 5: Comprehensive pentesting performance profiles of TENAX and the three baseline paradigms across various XOR APUF
+configurations. The three panels plot evaluation metrics crucial to automated verification: characterization fidelity (accuracy), query data
+footprint in terms of #CRPs (Dbudget), and operational auditing latency (runtime).
+
+TABLE III: Comparison of trainable parameters in CP-Tensor and
+TENAX on the evaluated n-bit x-XOR APUFs.
+
+n, x
+
+64,6
+
+64,7
+
+64,8
+
+128,7
+
+Trainable parameters
+
+Trainable parameters
+
+in CP-Tensor
+
+in TENAX
+
+3910
+
+182400
+
+364700
+
+1356000
+
+782
+
+912
+
+1042
+
+29672
+
+complex XOR APUFs with far fewer trainable parameters,
+while maintaining both high accuracy and low runtime.
+
+TENAX achieves its advantages by combining the repre-
+sentational efficiency of TT factorization with TRN’s ability
+to capture nonlinear PUF behaviors. This integration enables
+both compact model representation and accelerated training.
+On the 128-bit 7-XOR APUF, TENAX requires only 5%
+of the CRPs used by Linear Modeling [13], [14], [34] and
+reduces runtime from 196.77 hours to 6.61 hours, a 29.77×
+speedup, while its accuracy remains within 0.50 percentage
+points. On the 64-bit 8-XOR APUF, TENAX improves
+accuracy from 94.55% for CP-based tensor modeling [18]
+to 97.30% and reduces runtime from 25.69 hours to 46.76
+minutes, a 32.96× speedup.
+
+Across all benchmark PUF architectures, TENAX exhibits
+distinct computational advantages compared with conven-
+tional CP and Tucker tensor regression pipelines, enabled
+by native Tensor-Train factorization paired with PCA feature
+expansion. It offers a scalable universal evaluation method
+with lightweight parameters, stable high accuracy and low
+training cost. With native built-in PCA feature expansion and
+broad compatibility with various PUF architectures, TENAX
+serves as a benchmark tool for systematic PUF security
+evaluation amid evolving hardware primitives.
+
+Beyond gradient-descent algorithms such as deep learn-
+ing, Covariance Matrix Adaptation Evolution Strategy
+(CMA-ES) represents a distinct testing paradigm rooted in
+heuristic global optimization. Incorporating CMA-ES as an
+evaluation baseline is crucial for conducting a comprehen-
+sive vulnerability assessment across mathematically diverse
+optimization categories. Within contemporary hardware se-
+
+curity testing, CMA-ES configurations generally diverge into
+traditional CRP-driven schemes and reliability-based frame-
+works, with the latter leveraging response variance under re-
+peated queries as side-channel leakage [35], [36]. Although
+reliability-guided CMA-ES can efficiently characterize high-
+order structures, such as 10-XOR or even 30-XOR APUFs
+when augmented with power traces, these methodologies
+inherently presuppose a significantly more permissive threat
+model. Because they depend on multi-query stability profiles
+from identical challenges, they fall under the classification
+of side-channel-assisted evaluation, which departs from the
+strict query-constrained, zero-oracle verification boundaries
+established in practical IoT deployment scenarios.
+
+To ensure a rigorous and mathematically aligned com-
+this work strictly adheres to the response-only
+parison,
+threat model, wherein the testing agent possesses exclusive
+the leverage
+access to challenge-response pairs without
+of repeated queries, reliability profiles, or auxiliary side-
+channel
+leakage. Consequently, we deploy the standard
+CRP-driven CMA-ES configuration as a baseline, isolating
+it from reliability-assisted variants that presuppose an overly
+permissive verification boundary. As detailed in Table IV,
+TENAX demonstrates overwhelming advantages across all
+metric dimensions. In terms of query footprint, CMA-ES
+requires up to 32× more CRPs than TENAX in the 64-bit
+5-XOR and 128-bit 4-XOR cases, and the arithmetic mean
+of the per-configuration data-budget ratios is 17.85×. When
+the compositional complexity scales to x ≥ 5, the heuristic
+search mechanism of CMA-ES suffers from severe con-
+vergence bottlenecks under strict query and computational
+budgets. For architectural clarity, these baseline results are
+presented independently from the primary evaluation matrix
+in Table II, while the expansion of TENAX to encompass
+multi-query reliability properties remains a subject for future
+exploration.
+
+C. Modeling Evaluation on XOR-based APUF Exten-
+sions (iPUFs and LSPUFs)
+
+To counter attacks, modern strong PUFs predominantly
+follow two defense paradigms, i.e., structural non-linearity
+injection and CRP obfuscation. Interpose PUFs (iPUFs)
+exemplify the former by feeding upper-layer responses into
+
+9092949698100Accuracy (%)TENAXCP-Tensor ModelingLinear ModelingConnectionist97.68 ± 0.3994.49 ± 0.8697.61 ± 0.2197.21 ± 0.43123456 #CRPs Required from Query1e72.4e+062.5e+064.3e+071.2e+07101102103104105Runtime (min)57.2205.41155.4145.7TABLE IV: Comparison of TENAX and CMA-ES-based Model-
+ing on Different Configurations of XOR APUFs.
+
+TABLE VI: Comparison of TENAX and the latest pentests on
+different configurations of LSPUF.
+
+n
+
+x
+
+64
+
+128
+
+256
+
+3
+
+4
+
+5
+
+2
+
+3
+
+4
+
+2
+
+3
+
+4
+
+Evaluation
+Scheme
+TENAX
+CMA-ES
+TENAX
+CMA-ES
+TENAX
+CMA-ES
+TENAX
+CMA-ES
+TENAX
+CMA-ES
+TENAX
+CMA-ES
+TENAX
+CMA-ES
+TENAX
+CMA-ES
+TENAX
+CMA-ES
+
+Dbudget
+
+Runtime
+
+Acc.(%)
+
+3k
+60k
+10k
+160k
+40k
+1.28M
+2k
+10k
+5k
+80k
+30k
+960k
+4k
+20k
+15k
+320k
+150k
+2M
+
+16.2s
+6.69m
+24s
+39.17m
+1.19m
+3.27m
+15s
+2.09m
+20.4s
+16.28m
+58.8s
+4.67h
+23.4s
+11.36m
+56.4s
+2.61h
+9.86m
+18.73h
+
+97.47
+91.40
+98.48
+90.64
+98.06
+90.44
+94.40
+90.24
+96.40
+93.04
+97.85
+90.72
+94.50
+92.38
+97.36
+91.18
+97.43
+91.72
+
+TABLE V: Comparison of TENAX and Split-iPUF on Different
+Configurations of iPUF.
+
+n
+
+(x, y)
+
+(4,4)
+
+(5,5)
+
+64
+
+(1,5)
+
+(1,6)
+
+(1,7)
+
+(4,4)
+
+(1,5)
+
+128
+
+Evaluation
+Scheme
+TENAX
+Split-iPUF
+TENAX
+Split-iPUF
+TENAX
+Split-iPUF
+TENAX
+Split-iPUF
+TENAX
+Split-iPUF
+TENAX
+Split-iPUF
+TENAX
+Split-iPUF
+
+Dbudget
+
+Runtime
+
+Acc.(%)
+
+100k
+500k
+300k
+1M
+100k
+500k
+500k
+3M
+2.5M
+12M
+240k
+1.2M
+600k
+2.4M
+
+11.12m
+28.08m
+26.83m
+55.81m
+13.86m
+26.01m
+1.04h
+2.75h
+2.81h
+10.44h
+1.11h
+2.20h
+1.88h
+5.73h
+
+95.50
+95.84
+95.71
+95.17
+98.16
+95.06
+98.56
+98.61
+98.12
+98.25
+95.04
+94.03
+99.02
+98.28
+
+lower-layer challenges, whereas Lightweight Secure PUFs
+(LSPUFs) embody the latter via non-linear challenge trans-
+formations. Evaluating TENAX on both architectures thus
+provides a rigorous assessment across these foundational
+defense philosophies.
+The state-of-the-art
+
+iPUF baseline is Split-iPUF [19].
+It models iPUFs using a divide-and-conquer strategy in
+which the upper and lower XOR APUF layers are attacked
+separately via iterative regression. We show that TENAX
+can also model iPUFs effectively with substantially lower
+runtime.
+
+Table V compares the modeling performance of Split-
+iPUF and TENAX across various configurations of 64-bit
+and 128-bit iPUFs. To ensure a fair comparison, we follow
+the noise-free experimental setup described in [19]. Con-
+sistent with the trends observed in XOR APUF modeling,
+TENAX requires far fewer CRPs to successfully model
+iPUFs while achieving comparable accuracy and signifi-
+cantly reduced runtime. On the 64-bit (1,7)-iPUF, TENAX
+requires 20.83% of the CRPs used by Split-iPUF and reduces
+runtime from 10.44 hours to 2.81 hours, a 3.72× speedup.
+
+n
+
+64
+
+128
+
+x
+
+4
+
+5
+
+6
+
+4
+
+5
+
+Evaluation
+Scheme
+TENAX
+Break-LSPUF
+TENAX
+Break-LSPUF
+TENAX
+Break-LSPUF
+TENAX
+Break-LSPUF
+TENAX
+Break-LSPUF
+
+Dbudget
+
+Runtime
+
+Acc.(%)
+
+8k
+32k
+75k
+300k
+480k
+1M
+80k
+1M
+600k
+2M
+
+36.6s
+1.10m
+2.00m
+6.86m
+13.46m
+31.56m
+6.45m
+32.62m
+26.16m
+1.72h
+
+97.50
+97.98
+98.16
+98.28
+97.84
+97.26
+98.30
+98.67
+98.24
+98.37
+
+TENAX achieves higher accuracy in four of the seven
+configurations; in the remaining three, its average accuracy
+difference is within 0.17%. Across all seven configurations,
+TENAX achieves an average runtime speedup of 2.55×.
+
+For modeling attacks on LSPUFs, prior work has inves-
+tigated the representative Break-LSPUF attack [20], which
+builds on LR and introduces swapping and rotation opera-
+tions to escape suboptimal local minima.
+
+In this study, we evaluate TENAX against this existing
+attack on 64-bit and 128-bit LSPUFs under various config-
+urations. In our formulation, Eq. (14) is adapted such that
+the shared parity vector Φ is replaced by individual vectors
+Φk, meaning that each TT core tensor G(k) contracts with
+its corresponding Φk. That is,
+
+M(k) = G(k) ×2 Φk,
+
+(15)
+
+where ×2 denotes the mode-2 tensor matrix product.
+
+Table VI summarizes the comparison results. On the
+128-bit 4-LSPUF, TENAX uses 80k rather than 1M CRPs,
+corresponding to 8% of the data used by Break-LSPUF [20],
+and reduces runtime from 32.62 minutes to 6.45 minutes, a
+5.06× speedup, while reaching 98.30% accuracy. On the
+64-bit 6-LSPUF, TENAX improves accuracy from 97.26%
+to 97.84%, reduces the CRP budget from 1M to 480k, and
+cuts the runtime from 31.56 minutes down to 13.46 minutes.
+Hence, TENAX strikes the best efficiency-accuracy trade-
+off. The query efficiency demonstrates that a Red Team
+auditor can successfully characterize obfuscated defenses
+(e.g., LSPUFs and iPUFs) within a highly non-intrusive
+pentesting window, rendering traditional CRP-exhaustion
+countermeasures ineffective.
+
+D. Modeling Evaluation on FPGA-Implemented PUFs
+
+Previous studies have shown that the behavior of silicon
+PUFs may deviate from that of their simulated counterparts
+due to manufacturing variations, routing resources, and
+placement-dependent delay characteristics [37]. To assess
+the practical effectiveness and robustness of the proposed
+attack framework under realistic hardware conditions, we
+conduct modeling attacks on PUF instances implemented
+on commercial FPGA platforms.
+
+In particular, we consider both intra-chip and inter-
+chip variability in our experimental design. For intra-chip
+
+(a) Block-level floorplaning using different pblocks on an AMD XC7Z010
+FPGA to capture intra-chip spatial variability
+
+TABLE VII: Comparison of TENAX and SOTA Pentests of the
+PUFs implemented on FPGAs
+
+n x
+
+64 5
+
+128 4
+
+Evaluation
+Scheme
+TENAX
+CP-Tensor
+Linear Modeling
+TENAX
+CP-Tensor
+Linear Modeling
+
+(a) XOR APUF
+
+Dbudget
+
+XC7Z010(28nm) XC6SLX16(45nm)
+Runtime Acc.(%) Runtime Acc.(%)
+
+80k
+80k
+80k
+60k
+60k
+120k
+
+1.56m
+1.04m
+55.2s
+2.01m
+1.55m
+1.21m
+
+(b) iPUF
+
+97.36
+94.47
+96.58
+97.91
+95.12
+97.02
+
+1.63m
+54.6s
+56.4s
+2.05m
+1.48m
+1.48m
+
+97.32
+94.52
+96.77
+98.23
+97.75
+97.75
+
+n (x, y)
+
+64
+
+(1,5)
+
+128 (1,4)
+
+Evaluation
+Scheme
+TENAX
+Split-iPUF
+TENAX
+Split-iPUF
+
+Dbudget
+
+150k
+500k
+200k
+600k
+
+28 nm
+
+45 nm
+
+Runtime Acc.(%) Runtime Acc.(%)
+12.70m 95.48
+44.52m 95.51
+28.57m 96.12
+52.36m 95.47
+
+13.09m 96.50
+42.51m 94.90
+27.42m 95.75
+51.22m 95.61
+
+(c) LSPUF
+
+Dbudget
+
+28 nm
+
+45 nm
+
+Runtime Acc.(%) Runtime Acc.(%)
+
+Evaluation
+Scheme
+TENAX
+
+n x
+
+64 5
+
+128 4
+
+96.68
+3.57m
+160k
+96.06
+6.42m
+Break-LSPUF 300k
+120k
+97.37
+3.96m
+1M 32.03m 97.26
+
+TENAX
+Break-LSPUF
+
+97.32
+3.95m
+95.43
+6.28m
+4.13m
+97.75
+29.02m 97.56
+
+(b) Two FPGA platforms used for cross-device validation: AMD Xilinx
+XC7Z010CLG400-1C (28 nm) and XC6SLX16-2FTG256l (45 nm)
+
+Fig. 6: FPGA-based PUF evaluation setup addressing intra-chip
+and inter-chip variability
+
+evaluation, PUF instances are implemented under different
+physical placement constraints on the same FPGA device.
+As illustrated in Fig. 6(a), distinct pblock constraints are
+applied to map identical PUF architectures onto different
+regions of the FPGA fabric. This block-level placement strat-
+egy intentionally induces variations stemming from spatial
+process differences, heterogeneous routing resources, and
+local delay characteristics, thereby allowing the collected
+CRPs to reflect diverse hardware realizations within a single
+chip rather than a single fixed placement.
+
+For inter-chip evaluation, we further conduct experiments
+tech-
+on two FPGA platforms fabricated using different
+nology nodes. Specifically, the same set of experiments is
+performed on an AMD Xilinx XC7Z010CLG400-1C FPGA
+manufactured using 28 nm process technology and on an
+AMD Xilinx XC6SLX16-2FTG256I FPGA fabricated using
+a 45 nm process. Photographs of the two FPGA boards
+used in our experiments are shown in Fig. 6(b). The same
+PUF architectures, data acquisition procedures, and attack
+configurations are applied across both platforms to ensure a
+fair and consistent comparison.
+
+The modeling results obtained from FPGA-implemented
+PUFs are summarized in Table VII. It can be seen that,
+across different placement regions and across both FPGA
+the proposed TENAX-based attacks achieve
+platforms,
+modeling accuracy comparable to or better than Linear
+Modeling-based methods while requiring fewer CRPs and
+significantly shorter runtime. Moreover, under the same
+training set size, TENAX consistently outperforms the CP-
+
+tensor modeling in terms of modeling accuracy. Importantly,
+the overall performance trends remain consistent across
+the two FPGA devices, indicating that the proposed attack
+framework is robust to both intra-chip placement variability
+and inter-chip differences arising from distinct fabrication
+technologies. Although evaluation on a larger population
+of devices may further strengthen the conclusions,
+the
+consistent results across two different FPGA families and
+technology nodes (28nm and 45nm) already provide strong
+evidence of cross-device robustness.
+
+VI. Conclusion
+
+We propose TENAX, a general paradigm for query-
+constrained PUF security evaluation built around Tensor-
+Train computation. TENAX resolves three core bottlenecks
+pervasive within existing PUF assessment pipelines, which
+are excessive parameter complexity, unfavorable efficiency-
+accuracy trade-offs, and insufficient generalization across di-
+verse strong PUF constructions. Its performance gains stem
+from three coordinated design choices, i.e., compact Tensor-
+Train factorization to bound parameter scale, native PCA
+feature expansion to boost CRP utilization, and an end-to-
+end pipeline natively compatible with XOR APUFs, iPUFs,
+LSPUFs, and FPGA silicon implementations. By pushing
+the boundaries of vulnerability assessment under extreme
+query starvation, TENAX achieves consistent performance
+gains across all tested PUF variants. Crucially, identifying
+the critical query thresholds required for effective pentesting
+helps define reliable security margins, providing a grounded
+foundation for designing secure PUF authentication proto-
+cols in real-world deployments.
+
+[22] J. Kossaifi, Z. C. Lipton, A. Khanna, T. Furlanello, and A. Anand-
+kumar, “Tensor regression networks,” arXiv preprint, 2017. [Online].
+Available: http://arxiv.org/abs/1707.08308
+
+[23] X. Cao, G. Rabusseau, and J. Pineau, “Tensor regression networks
+with various low-rank tensor approximations,” arXiv preprint, 2017.
+[Online]. Available: http://arxiv.org/abs/1712.09520
+
+[24] D. Lim, “Extracting secret keys from integrated circuits,” Master’s
+thesis, Massachusetts Institute of Technology (MIT), 2004. [Online].
+Available: https://dspace.mit.edu/handle/1721.1/16686
+
+[25] D. Lim, J. W. Lee, B. Gassend, G. E. Suh, M. van Dijk, and
+S. Devadas, “Extracting secret keys from integrated circuits,” IEEE
+Trans. Very Large Scale Integr. (VLSI) Syst., vol. 13, no. 10, pp. 1200–
+1205, Oct. 2005.
+
+[26] D. Lim, “Extracting secret keys from integrated circuits,” M.S.
+thesis, Dept. Elect. Eng. Comput. Sci., Massachusetts Inst. Technol.,
+Cambridge, MA, USA, 2004.
+
+[27] I. V. Oseledets, “Tensor-train decomposition,” SIAM J. Sci. Comput.,
+
+vol. 33, no. 5, pp. 2295–2317, 2011.
+
+[28] S. Budzinskiy, “When big data actually are low-rank, or entrywise ap-
+proximation of certain function-generated matrices,” in SIAM Journal
+on Mathematics of Data Science, vol. 7, issue. 3, p.1098, 2025.
+[29] G. Ballard and T. G. Kolda, “Tensor decompositions for data science,”
+
+in Cambridge University Press, 2025.
+
+[30] M. Abadi et al., “TensorFlow: A system for large-scale machine
+learning,” in Proc. 12th USENIX Conf. Oper. Syst. Design Implement.,
+2016, pp. 265–283.
+
+[31] X. Glorot and Y. Bengio, “Understanding the difficulty of training
+deep feedforward neural networks,” in Proc. Int. Conf. Artif. Intell.
+Stat., 2010, pp. 249–256.
+
+[32] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimiza-
+
+tion,” in Proc. Int. Conf. Learn. Represent., 2015, pp. 1–15.
+
+[33] Y. A. LeCun, L. Bottou, G. B. Orr, and K.-R. Mller, Efficient
+
+BackProp. Heidelberg, Germany: Springer, 2012, pp. 9–48.
+
+[34] Nils Wisiol, “pypuf: A Python toolbox for physical unclonable func-
+tions,” GitHub repository, 2021.[Online]. Available: https://github.
+com/nils-wisiol/pypuf.[Accessed: 2026-01-21].
+
+[35] W. Liu, Y. Zhang, Y. Tang, H. Wang, and Q. Wei, “ALScA: A
+framework for using auxiliary learning side-channel attacks to model
+PUFs,” IEEE Transactions on Information Forensics and Security,
+vol. 18, pp. 804–817, 2023.
+
+[36] Y. Gao et al., “MLMSA: Multilabel multiside-channel-information en-
+abled deep learning attacks on APUF variants,” IEEE Transactions on
+Computer-Aided Design of Integrated Circuits and Systems, vol. 42,
+no. 9, pp. 2863–2876, Sept. 2023.
+
+[37] A. Aghaie and A. Moradi, “Inconsistency of simulation and practice
+in delay-based strong PUFs,” IACR Transactions on Cryptographic
+Hardware and Embedded Systems, pp. 520–551, 2021.
+
+[38] Z. Huang, Y. Lin, Z. Wang, Y. Lu, H. Liang, J. Bian, Y. Ouyang, T. Ni,
+and X. Wen, “A parallel feedback obfuscation strong PUF against
+machine-learning modeling attacks and lightweight authentication
+protocol,” IEEE Trans. Dependable Secure Comput., vol. 23, no. 2,
+pp. 3051–3067, 2026, doi: 10.1109/TDSC.2025.3632835.
+
+References
+
+[1] B. Gassend, D. Clarke, M. van Dijk, and S. Devadas, “Silicon physical
+random functions,” in Proc. ACM Conf. Comput. Commun. Secur.,
+2002, pp. 148–160.
+
+[2] G. E. Suh and S. Devadas, “Physical unclonable functions for device
+authentication and secret key generation,” in Proc. 44th ACM/IEEE
+Design Autom. Conf. (DAC), 2007, pp. 9–14.
+
+[3] U. R¨uhrmair, F. Sehnke, J. S¨olter, G. Dror, S. Devadas, and J. Schmid-
+huber, “Modeling attacks on physical unclonable functions,” in Proc.
+ACM Conf. Comput. Commun. Security, 2010, pp. 237–249.
+
+[4] D. P. Sahoo, D. Mukhopadhyay, R. S. Chakraborty, and P. H. Nguyen,
+“A multiplexer-based arbiter PUF composition with enhanced reliabil-
+ity and security,” IEEE Trans. Comput., vol. 67, no. 3, pp. 403–417,
+Mar. 2018.
+
+[5] N. Wisiol and M. Margraf, “Why attackers lose: Design and security
+analysis of arbitrarily large XOR arbiter PUFs,” J. Cryptograph. Eng.,
+vol. 9, no. 3, pp. 221–230, 2019.
+
+[6] P. H. Nguyen, D. P. Sahoo, C. Jin, K. Mahmood, U. R¨uhrmair, and
+M. van Dijk, “The interpose PUF: Secure PUF design against state-
+of-the-art machine learning attacks,” IACR Trans. Cryptogr. Hardw.
+Embed. Syst., vol. 2019, no. 4, pp. 243–290, 2019.
+
+[7] G. T. Becker, “The gap between promise and reality: On the insecurity
+of XOR arbiter PUFs,” in Cryptographic Hardware and Embedded
+Systems – CHES 2015, Springer, 2015, pp. 535–555.
+
+[8] M. Majzoobi, M. Rostami, F. Koushanfar, D. S. Wallach and S.
+Devadas, “Slender PUF Protocol: A Lightweight, Robust, and Secure
+Authentication by Substring Matching,” IEEE Symposium on Security
+and Privacy Workshops, pp. 33–44, 2012.
+
+[9] J. Shi, Y. Lu, and J. Zhang, “Approximation attacks on strong PUFs,”
+IEEE Trans. Comput.-Aided Des. Integr. Circuits Syst., vol. 39, no. 10,
+pp. 2138–2151, Oct. 2020.
+
+[10] F. Ganji, S. Tajik, F. Fler, and J.-P. Seifert, “Strong machine learning
+attack against PUFs with no mathematical model,” in Cryptographic
+Hardware and Embedded Systems – CHES 2016, Springer, vol. 9813,
+2016, pp. 391–411.
+
+[11] J. Tobisch, A. Aghaie, and G. T. Becker, “Combining optimization
+objectives: New modeling attacks on strong PUFs,” IACR Trans.
+Cryptogr. Hardw. Embed. Syst., vol. 2021, no. 3, pp. 357–389, 2021.
+[12] H. Wang, C. Wan, and H. Jin, “Efficient modeling attack on mul-
+tiplexer PUFs via kronecker matrix multiplication,” IEEE Trans.
+Comput.-Aided Design Integr. Circuits Syst., vol. 44, no. 8, pp. 2883–
+2896, Aug. 2025, doi: 10.1109/TCAD.2025.3531336.
+
+[13] J. S¨olter, “Cryptanalysis of electrical PUFs via machine learning al-
+gorithms,” Master’s thesis, Univ. of Passau, 2009. [Online]. Available:
+https://opus4.kobv.de/opus4-fau/frontdoor/index/index/docId/1171
+[14] J. Tobisch and G. T. Becker, “On the scaling of machine learning
+attacks on PUFs with application to noise bifurcation,” in Proc. Int.
+Workshop RFID Secur. Privacy Issues (RFIDSec), 2015, pp. 17–31.
+[15] H. Wang, W. Liu, W. Cai, Y. Lu, and C. Wan, “Efficient attacks on
+strong PUFs via covariance and boolean modeling,” ACM Trans. Des.
+Autom. Electron. Syst., vol. 29, no. 6, Art. 95, Nov. 2024. [Online].
+Available: https://doi.org/10.1145/3687469
+
+[16] K. T. Mursi, B. Thapaliya, Y. Zhuang, A. O. Aseeri, and
+M. S. Alkatheiri, “A fast deep learning method for security vulnera-
+bility study of XOR PUFs,” Electronics, vol. 9, no. 10, 2020.
+[17] N. Wisiol, B. Thapaliya, K. T. Mursi, J.-P. Seifert, and Y. Zhuang,
+“Neural network modeling attacks on Arbiter-PUF-based designs,”
+IEEE Transactions on Information Forensics and Security, vol. 17,
+pp. 2719–2731, 2022.
+
+[18] P. Santikellur and R. S. Chakraborty, “A computationally efficient
+tensor regression network-based modeling attack on XOR arbiter PUF
+and its variants,” IEEE Trans. Comput.-Aided Des. Integr. Circuits
+Syst., vol. 40, no. 6, pp. 1197–1206, Jun. 2021.
+
+[19] N. Wisiol, C. M¨uhl, N. Pirnay, P. H. Nguyen, M. Margraf, J.-P.
+Seifert, M. van Dijk, and U. R¨uhrmair, “Splitting the interpose PUF:
+A novel modeling attack strategy,” IACR Trans. Cryptogr. Hardw.
+Embed. Syst., vol. 2020, no. 1, pp. 1–26, 2020.
+
+[20] N. Wisiol, G. T. Becker, M. Margraf, T. A. Soroceanu, J. Tobisch, and
+B. Zengin, “Breaking the lightweight secure PUF: Understanding the
+relation of input transformations and machine learning resistance,” in
+Smart Card Research and Advanced Applications. Cham, Switzerland:
+Springer, 2020, pp. 40–54.
+
+[21] M. Majzoobi, F. Koushanfar, and M. Potkonjak, “Lightweight secure
+PUFs,” in Proc. IEEE/ACM Int. Conf. Comput.-Aided Design, San
+Jose, CA, USA, 2008, pp. 670–673.
+
+

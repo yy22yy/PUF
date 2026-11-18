@@ -21,7 +21,7 @@ from .common import (
     binary_metrics, file_sha256, initialize_parameters, load_backend,
     probabilities, save_npz_with_csv, save_parameters, split_indices, write_json,
 )
-from project_config import load_project_config, resolve_project_path
+from pufkit.config import load_project_config, resolve_project_path
 
 
 def utc_now() -> str:
@@ -32,7 +32,7 @@ def source_record(project_root: Path) -> dict:
     paths = [*Path(__file__).parent.glob("*.py")]
     paths.extend(project_root / name for name in (
         "attacks/common.py", "attacks/apuf_lr.py", "puf/features.py",
-        "project_config.py", "puf.toml",
+        "pufkit/config.py", "pufkit/io.py", "puf.toml",
     ))
     result = {"sha256": {str(p.relative_to(project_root)): file_sha256(p) for p in sorted(paths)}}
     try:

@@ -10,7 +10,7 @@ import unittest
 
 import numpy as np
 
-from merge_crp import merge_crp
+from pufkit.crp import merge_crp
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,7 +28,7 @@ class CRPGenerationTests(unittest.TestCase):
     def generate(self, puf_type="apuf", xor_count=None, response_name="responses.npy"):
         output = self.directory / puf_type / response_name
         command = [
-            sys.executable, str(ROOT / "generate_crp.py"),
+            sys.executable, "-m", "pufkit.crp", "generate",
             "--challenge-path", str(self.challenge_path),
             "--response-path", str(output),
             "--puf-type", puf_type, "--seed", "42", "--challenge-seed", "42",
@@ -73,7 +73,7 @@ class CRPGenerationTests(unittest.TestCase):
 
                 crp_path = response_path.with_name("crps.npy")
                 completed = subprocess.run([
-                    sys.executable, str(ROOT / "merge_crp.py"),
+                    sys.executable, "-m", "pufkit.crp", "merge",
                     "--challenge-path", str(self.challenge_path),
                     "--response-path", str(response_path), "--output-path", str(crp_path),
                 ], cwd=ROOT, capture_output=True)
@@ -141,7 +141,7 @@ class CRPGenerationTests(unittest.TestCase):
     def test_invalid_model_options_are_rejected(self):
         for options in (("--puf-type", "xor-apuf"), ("--puf-type", "xor-apuf", "--xor-count", "0"), ("--xor-count", "3")):
             with self.subTest(options=options):
-                result = subprocess.run([sys.executable, str(ROOT / "generate_crp.py"), *options], cwd=ROOT, capture_output=True)
+                result = subprocess.run([sys.executable, "-m", "pufkit.crp", "generate", *options], cwd=ROOT, capture_output=True)
                 self.assertEqual(result.returncode, 2)
 
 

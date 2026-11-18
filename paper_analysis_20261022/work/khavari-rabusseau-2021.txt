@@ -1,0 +1,731 @@
+
+=== PDF 1 ===
+Lower and Upper Bounds on the Pseudo-Dimension
+of Tensor Network Models
+Behnoush Khavari
+DIRO & Mila
+Université de Montréal
+behnoush.khavari@umontreal.ca
+Guillaume Rabusseau
+DIRO & Mila, CIFAR AI Chair
+Université de Montréal
+grabus@iro.umontreal.ca
+Abstract
+Tensor network (TN) methods have been a key ingredient of advances in condensed
+matter physics and have recently sparked interest in the machine learning commu-
+nity for their ability to compactly represent very high-dimensional objects. TN
+methods can for example be used to efﬁciently learn linear models in exponen-
+tially large feature spaces [ 56]. In this work, we derive upper and lower bounds
+on the VC-dimension and pseudo-dimension of a large class of TN models for
+classiﬁcation, regression and completion. Our upper bounds hold for linear models
+parameterized by arbitrary TN structures, and we derive lower bounds for common
+tensor decomposition models (CP , Tensor Train, Tensor Ring and Tucker) showing
+the tightness of our general upper bound. These results are used to derive a gener-
+alization bound which can be applied to classiﬁcation with low-rank matrices as
+well as linear classiﬁers based on any of the commonly used tensor decomposition
+models. As a corollary of our results, we obtain a bound on the VC-dimension of
+the matrix product state classiﬁer introduced in [ 56] as a function of the so-called
+bond dimension (i.e. tensor train rank), which answers an open problem listed by
+Cirac, Garre-Rubio and Pérez-García in [ 13].
+1 Introduction
+Tensor networks (TNs) have emerged in the quantum physics community as a mean to compactly
+represent wave functions of large quantum systems [ 45, 5, 52]. Their introduction in physics can be
+traced back to the work of Penrose [ 47] and Feynman [ 15]. Akin to matrix factorization, TN methods
+rely on factorizing a high-order tensor into small factors and have recently gained interest from the
+machine learning community for their ability to efﬁciently represent and perform operations on very
+high-dimensional data and high-order tensors. They have been for example successfully used for
+compressing models [43, 69, 42, 29, 70], developing new insights on the expressiveness of deep neural
+networks [14, 31] and designing novel approaches to supervised [56, 18] and unsupervised [55, 25, 39]
+learning. Most of these approaches leverage the fact that TN can be used to efﬁciently parameterize
+high-dimensional linear maps, which is appealing from two perspectives: it makes it possible to learn
+models in exponentially large feature spaces and it acts as a regularizer, controlling the capacity of
+the class of hypotheses considered for learning.
+While the expressive power of TN models has been studied recently [ 17, 2], the focus has mainly been
+on the representation capacity of TN models, but not on their ability to generalize in the context of
+supervised learning tasks. In this work, we study the generalization ability of TN models by deriving
+lower and upper bounds on the VC-dimension and pseudo-dimension of TN models commonly used
+for classiﬁcation, completion and regression, from which bounds on the generalization gap of TN
+models can be derived. Using the general framework of tensor networks, we derive a general upper
+bound for models parameterized by arbitrary TN structures, which applies to all commonly used
+tensor decomposition models [ 20] such as CP [ 27], Tucker [59] and tensor train (TT)) [ 46], as well
+35th Conference on Neural Information Processing Systems (NeurIPS 2021).
+
+=== PDF 2 ===
+as more sophisticated structures including hierarchical Tucker [ 19, 23], tensor ring (TR) [ 73] and
+projected entangled state pairs (PEPS) [ 60].
+Our analysis proceeds mainly in two steps. First, we formally deﬁne the notion of TN learning model
+by disentangling the underlying graph structure of a TN from its parameters (the core tensors, or
+factors, involved in the decomposition). This allows us to deﬁne, in a conceptually simple way, the
+hypothesis class HG corresponding to the family of linear models whose weights are represented
+using an arbitrary TN structure G. We then proceed to deriving upper bounds on the VC/pseudo-
+dimension and generalization error of the class HG. These bounds follow from a classical result
+from Warren [66] which was previously used to obtain generalization bounds for neural networks [ 3],
+matrix completion [54] and tensor completion [41]. The bounds we derive naturally relate the capacity
+of HG to the underlying graph structure G through the number of nodes and effective number of
+parameters of the TN. To assess the tightness of our general upper bound, we derive lower bounds
+for particular TN structures (rank-one, CP , Tucker, TT and TR). These lower bounds show that, for
+completion, regression and classiﬁcation, our general upper bound is tight up to a log factor for
+rank-one, TT and TR tensors, and is tight up to a constant for matrices. Lastly, as a corollary of
+our results, we obtain a bound on the VC-dimension of the tensor train classiﬁer introduced in [ 56],
+which answers one of the open problems listed by Cirac, Garre-Rubio and Pérez-García in [ 13].
+Related work Machine learning models using low-rank parametrization of the weights have been
+investigated (mainly from a practical perspective) for various decomposition models, including
+low-rank matrices [36, 49, 67], CP [ 1, 37, 7], Tucker [35, 16, 26, 50], tensor train [ 48, 10, 44, 56, 18,
+53, 11, 65, 68] and PEPS [ 12]. From a more theoretical perspective, generalization bounds for matrix
+and tensor completion have been derived in [ 54, 41] (based on the Tucker format for the tensor case).
+A bound on the VC-dimension of low-rank matrix classiﬁers was derived in [ 67] and a bound on the
+pseudo-dimension of regression functions whose weights have low Tucker rank was given in [ 50] (for
+both these cases, we show that our results improve over these previous bounds, see Section 4.2).
+To the best of our knowledge the VC-dimension of tensor train classiﬁers has not been studied in
+the past, but the statistical consistency of the convex relaxation of the tensor completion problem
+was studied in [ 58, 57] for the Tucker decomposition and in [ 28] for the tensor train decomposition.
+Lastly, in [38] the authors study the complexity of learning with tree tensor networks using the notion
+of metric entropy and covering numbers. They provide generalization bounds which are qualitatively
+similar to ours, but their results only hold for TN structures whose underlying graph is a tree (thus
+excluding models such as CP , tensor ring and PEPS) and they do not provide lower bounds.
+Summary of contributions We introduce a unifying framework for TN-based learning models ,
+which generalizes a wide range of models based on tensor factorization for completion, classiﬁcation
+and regression. This framework allows us to consider the class HG of low-rank TN models for a given
+arbitrary TN structure G (Section 3). We provide general upper bounds on the pseudo-dimension and
+VC-dimension of the hypothesis class HG for arbitrary TN structure G for regression, classiﬁcation
+and completion. Our results naturally relate the capacity of HG to the number of parameters of the
+underlying TN structure G (Section 4.1). From these results, we derive a generalization bound for
+TN-based classiﬁers parameterized by arbitrary TN structures (Theorem 4). We compare our results
+to previous bounds for speciﬁc decomposition models and show that our general upper bound is
+always of the same order and sometimes even improves on previous bounds (Section 4.2). We derive
+several lower bounds showing that our general upper bound is tight up to a log factor for particular
+TN structures (Section 5). A summary of the lower bounds derived in this work, as well as upper
+bounds implied by our general result for particular TN structures, can be found in Table 1 at the end
+of the paper.
+2 Preliminaries
+In this section, we present basic notions of tensor algebra and tensor networks as well as generalization
+bounds based on combinatorial complexity measures. We start by introducing some notations. For
+any integer k we use [k] to denote the set of integers from 1 to k. We use lower case bold letters for
+vectors (e.g. v 2 Rd1 ), upper case bold letters for matrices (e.g. M 2 Rd1 ⇥d2 ) and bold calligraphic
+letters for higher order tensors (e.g. T 2 Rd1 ⇥d2 ⇥d3 ). The inner product of two k-th order tensors
+S, T 2 Rd1 ⇥···⇥dk is deﬁned by hT , Si = Pd1i1 =1 ··· Pdkik =1 T i1 ...ik Si1 ...ik . The outer product of
+2
+
+=== PDF 3 ===
+A B = AB A =T r (A) x M y = x>My
+Figure 1: Tensor network representation of common operations on matrices and vectors.
+two vectors u 2 Rd1 and v 2 Rd2 is denoted by u ⌦ v 2 Rd1 ⇥d2 with elements (u ⌦ v)i,j = uivj .
+The outer product generalizes to an arbitrary number of vectors. We use the notation (Rd)⌦p to
+denote the space of p-th order hypercubic tensors of size d ⇥ d ⇥···⇥ d. We denote by YX the space
+of functions f : X 7! Y . sign(·) stands for the sign function. Finally, given a graph G =( V, E) and
+a vertex v 2 V , we denote by Ev = {e 2 E | v 2 e} the set of edges incident to the vertex v.
+2.1 Tensors and Tensor Networks
+Tensor networks A tensor T 2 Rd1 ⇥···⇥dp can simply be seen as a multidimensional array
+(T i1 ,··· ,ip : in 2 [dn],n 2 [p]). Complex operations on tensors can be intuitively represented using
+the graphical notation of tensor network (TN) diagrams [ 5, 45]. In tensor networks, a p-th order
+tensor is illustrated as a node with p edges (or legs) in a graph Td1
+d2
+dp . An edge between two nodes
+of a TN represents a contraction over the corresponding modes of the two tensors. Consider the
+following simple TN with two nodes: A xm n . The ﬁrst node represents a matrix A 2 Rm⇥n
+and the second one a vector x 2 Rn. Since this TN has one dangling leg (i.e. an edge which is not
+connected to any other node), it represents a ﬁrst order tensor, i.e. a vector. The edge between the
+second leg of A and the leg of x corresponds to a contraction between the second mode of A and the
+ﬁrst mode of x. Hence, the resulting TN represents the classical matrix-product, which can be seen by
+calculating the i-th component of this TN: A xi = Pj Aij xj =( Ax)i . Other examples
+of TN representations of common operations on matrices and vectors can be found in Figure 1.A
+special case of TN is the tensor train decomposition [ 46] which factorizes a n-th order tensor T in
+the form G1
+d1
+r1 G2
+d2
+r2 Gn-1rn 2
+dn 1
+rn 1
+Gn
+dn
+. This corresponds to
+T i1 ,i2 ,...,in =
+r1X
+↵1 =1
+···
+rn 1X
+↵n 1 =1
+(G1)i1 ,↵1 (G2)↵1 ,i2 ,↵2 ... (Gn 1)↵n 2 ,in 1 ,↵n 1 (Gn)↵n 1 ,in (1)
+where the tuple (ri)n 1i=1 associated with the TT representation is called TT-rank.
+Tensor network structures A tensor network (TN) can be fundamentally decomposed in two
+constituent parts: a tensor network structure, which describes its graphical structure, and a set of
+core tensors assigned to each node. For example, the tensor in Rd1 ⇥d2 ⇥d3 ⇥d4 represented by the TN
+Td1
+d2
+R Sd3d4 is obtained by assigning the core tensors T 2 Rd1 ⇥d2 ⇥R and S 2 RR⇥d3 ⇥d4 to the
+nodes of the TN structure d1
+d2
+R
+d3
+d4 .
+Formally, a tensor network structure is given by a graph G =( V, E, dim) where edges are labeled
+by integers: V is the set of vertices, E ⇢ V [ (V ⇥ V ) is a set of edges containing both classical
+edges (e 2 V ⇥ V ) and singleton edges ( e 2 V ) and dim : E ! N assigns a dimension to each
+edge in the graph. The set of singleton edges  G = E \ V corresponds to the dangling legs of a
+TN. Given a TN structure G, one obtains a tensor by assigning a core tensor T v 2 Ne2Ev Rdim(e)
+to each vertex v in the graph, where Ev = {e 2 E | v 2 e}. The resulting tensor, denoted by
+TN (G, {T v }v2V ), is a tensor of order | G| in the tensor product space Ne2 G Rdim(e). Given a
+tensor structure G =( V, E, dim), the set of all tensors that can be obtained by assigning core tensors
+to the vertices of G is denoted by T (G) ⇢ Ne2 G Rdim(e):
+T (G)= {TN (G, {T v }v2V ): T v 2 O
+e2Ev
+Rdim(e),v 2 V }. (2)
+3
+
+=== PDF 4 ===
+CP Tucker Tensor Train Tensor Ring
+Hierarchical Tucker PEPS
+Figure 2: TN representation of common decomposition models for 4th order and 9th order tensors.
+For CP , the black dot represents a hyperedge corresponding to a joint contraction over 4 indices.
+As an illustration, one can check that the set of m ⇥ n matrices of rank at most r is equal to
+T ( m r n ). Similarly, the set of 4th order d-dimensional tensors of TT rank at most r is equal
+to T (
+d
+r
+d
+r
+d
+r
+d
+).
+Finally, for a given graph structure G, the number of parameters of any member of the family T (G)
+in Equation ( 2) (which is the total number of entries of the core tensors {T v }v2V ) is given by
+NG =
+X
+v2V
+Y
+e2Ev
+dim(e) (3)
+This will be a central quantity in the generalization bounds and bounds on the VC-dimension of TN
+models we derive in Section 4.
+Common tensor network structures In Figure 2, we show the tensor network structures associated
+with classical tensor decomposition models such as CP , Tucker [ 59] and tensor train (TT) [ 46],
+also known as matrix product state (MPS) [ 45, 52]. For the case of the Candecomp/Parafac (CP)
+decomposition [27], note that the TN structure is a hyper-graph rather than a graph. We introduced the
+notion of TN structure focusing on graphs for clarity of exposition in the previous paragraph, but our
+formalism and results can be straightforwardly extended to hyper-graph TN structures. In addition,
+we include the tensor ring (TR) [ 73] (also known as periodic MPS) and PEPS decompositions which
+have initially emerged in quantum physics and recently gained interest in the machine learning
+community (see e.g., [ 12, 62, 63, 71]). We also show the hierarchical Tucker decomposition initially
+introduced in [ 19, 23].
+2.2 Generalization Bound and Complexity Measures
+The goal of supervised learning is to learn a function f mapping inputs x 2X to outputs y 2Y
+from a sample of input-output examples S = {(x1,y 1), ··· , (xn,y n)} drawn independently and
+identically (i.i.d.) from an unknown distribution D, where each yi ' f (xi). Given a set of
+hypotheses H⇢Y X , one natural objective is to ﬁnd the hypothesis h 2H minimizing the risk
+R(h)= E(x,y)⇠D `(h(x),y ) where ` : Y⇥Y! R+ is a loss function measuring the quality of the
+predictions made by h. However, since the distribution D is unknown, machine learning algorithms
+often rely on the empirical risk minimization principle which consists in ﬁnding the hypothesis
+h 2H that minimizes the empirical risk ˆRS (h)= 1n Pni=1 `(h(xi),y i). It is easy to see that theempirical risk is an unbiased estimator of the risk and one of the concerns of learning theory is to
+provide guarantees on the quality of this estimator. Such guarantees include generalization bounds,
+which are probabilistic bounds on the generalization gap R(h)   ˆRS (h). The generalization gap
+naturally depends on the size of the sample S, but also on the richness (or capacity, complexity) of
+the hypothesis class H.
+In this work, our focus is on uniform generalization bounds, which bound the generalization gap
+uniformly for any hypothesis h 2H as a function of the size of the training sample and of the
+complexity of the hypothesis class H. While there are many ways of measuring the complexity of
+H, including VC-dimension, Rademacher complexity, metric entropy and covering numbers, we
+focus on the VC-dimension for classiﬁcation tasks and its counterpart for real-valued functions, the
+pseudo-dimension, for completion and regression tasks.
+4
+
+=== PDF 5 ===
+Deﬁnition 1. Let H ⇢ {  1, +1}X be a hypothesis class. The growth function ⇧H : N ! N of H is
+deﬁned by
+⇧H(n)= s u p
+S={x1 ,...,xn }⇢X
+|{(h(x1),...,h (xn)) | h 2 H}|.
+The VC-dimension of H, dVC(H), is the largest number of points x1, ··· ,x n shattered by H, i.e., for
+which |{(h(x1),...,h (xn)) | h 2 H}| =2 n. In other words: dVC(H)=s u p {n | ⇧H(n)=2 n}.
+F or a real-valued hypothesis classH⇢ RX , we say that H pseudo-shatters the points x1,. . . ,xn 2X
+with thresholds t1,. . . ,tn 2 R , if for every binary labeling of the points (s1,. . . ,sn) 2 {  1, +1}n,
+there exists h 2H s.t. h(xi) <t i if and only if si =  1.
+The pseudo-dimension of a real-valued hypothesis class H⇢ RX , Pdim(H), is the supremum over
+n for which there exist n points that are pseudo-shattered by H (with some thresholds).
+Pseudo-dimension and VC-dimension are combinatorial measures of complexity (or capacity) which
+can be used to derive classical uniform generalization bounds over a hypothesis class (see, e.g., [ 6,
+40, 3]). By deﬁnition, the pseudo-dimension is related to the notion of VC-dimension by the relation
+Pdim(H)= dVC({(x, t) 7! sign(h(x)   t) | h 2H })
+which holds for any H⇢ RX .
+3 Tensor Networks for Supervised Learning
+In this section, we formalize the general notion of tensor network models . We then show how it
+encompasses classical models such as low-rank matrix completion [ 8, 9, 22, 51], classiﬁcation [36,
+49, 67], and tensor train based models [ 56, 18, 53, 11, 65, 68].
+3.1 Tensor Network Learning Models
+Consider a classiﬁcation problem where the input space X is the space of p-th order tensors
+Rd1 ⇥d2 ⇥···⇥dp . One motivation for TN models is that the tensor product space X can be expo-
+nentially large, thus learning a linear model in this space is often not feasible. Indeed, the number
+of parameters of a linear classiﬁer h : X 7! sign(hX , Wi), where W 2 Rd1 ⇥···⇥dp is the tensor
+weight parameters, grows exponentially with p. TN models parameterize W as a low-rank TN,
+thus reducing the number of parameters needed to represent a model h. Our objective is to derive
+generalization bounds for the class of such hypotheses parameterized by low-rank tensor networks
+for classiﬁcation, regression and completion tasks.
+Formally, let G =( V, E, dim) be a TN structure for tensors of shape d1 ⇥···⇥ dp, i.e. where the
+set of singleton edges  G = E \ V = {v1, ··· ,v p} and dim(vi)= di for each i 2 [p]. We are
+interested in the class of models whose weight tensors are represented in the TN structure G:
+HregressionG = {h : X 7! hW, X i| W 2 T (G)} (4)
+HclassifG = {h : X 7! sign(hW, X i) | W 2 T (G)} (5)
+HcompletionG = {h :( i1, ··· ,i p) 7! Wi1 ,··· ,ip | W 2 T (G)} (6)
+In Equation (6) for the completion hypothesis class, p-th order tensors are interpreted as real-valued
+functions f :[ d1]⇥· · ·⇥ [dp] 7! R over the indices of the tensor. HcompletionG is thus a class of functions
+over the indices domain, for which the notion of pseudo-dimension is well-deﬁned. This treatment of
+completion as a supervised learning task was considered previously to derive generalization bounds
+for matrix and tensor completion [ 54, 41].
+The beneﬁt of TN models comes from the drastic reduction in parameters when the TN structure
+G is low-rank, in the sense that the number of parameters NG is small compared to d1d2 ··· dp. In
+addition to allowing one to represent linear models in exponentially large spaces, this compression
+controls the capacity of the corresponding hypothesis class HG.
+3.2 Examples
+To illustrate some TN models, we now present several examples of models based on common TN
+structures: low-rank matrices and tensor trains.
+5
+
+=== PDF 6 ===
+Low-rank matrices As discussed in Section 2.1, if we deﬁne the TN structure
+Gmat(r)= d1 r d2 ,
+then T (Gmat(r)) is the set of matrices in Rd1 ⇥d2 of rank at most r. The hypothesis class HcompletionGmat (r)
+then corresponds to the classical problem of low-rank matrix completion [ 8, 9, 22, 51]. Similarly
+HclassifGmat (r) corresponds to the hypothesis class of low-rank matrix classiﬁers. This hypothesis class
+was previously considered, notably to compactly represent the parameters of support vector machines
+for matrix inputs [ 36, 49, 67]. Lastly, for the regression case, HregressionGmat (r) is the set of functions
+{h : X 7! Tr(WX>) | rank(W)  r}. Learning hypotheses from this class is relevant in, e.g.,
+quantum tomography, where it is known as the low-rank trace regression problem [24, 64, 30, 33].
+Tensor train tensors The tensor train (TT) decomposition model [46] also known as matrix product
+state (MPS) in the quantum physics community [ 45, 52], has a number of parameters that grows only
+linearly with the order of the tensor. This makes the TT format an appealing model for compressing
+the parameters of ML models [ 56, 44, 17, 43]. We now present the tensor train classiﬁer model which
+was introduced in [ 56] and subsequently explored in [ 18]. Given a vector input x 2 Rp, Stoudenmire
+and Schwab [56] propose to map x into a high-dimensional space of p-th order tensors X = Rd⇥···⇥d
+by applying a local feature map   : R ! Rd to each component of the vector x and taking their outer
+product:  (x)=  (x1) ⌦  (x2) ⌦···⌦  (xp) 2 (Rd)⌦p.
+Instead of relying on the so-called kernel trick, Stoudenmire and Schwab propose to directly learn
+the parameters W of a linear model h : x 7! sign(hW,  (x)i) in the exponentially large feature
+space X . The learning problem is made tractable by paremeterizing W as a low-rank TT tensor (see
+Equation (1)). Letting
+GTT(r1, ··· ,r p 1)= d1
+r1
+d2
+r2 ··· rp 2
+dp 1
+rp 1
+dp
+the hypothesis class considered in [ 56] is HclassifGTT (r1 ,··· ,rp 1 ). In addition to the approach of [ 56],
+which was extended in [ 18] and [53], tensor train classiﬁers were also previously considered in [ 11,
+65, 68]. Similarly, the hypothesis class HcompletionGTT (r1 ,··· ,rp 1 ) corresponds to the low-rank TT completion
+problem [21, 48, 61].
+Other TN models Lastly, we mention that our formalism can be applied to any tensor models
+having a low-rank structure, including CP , Tucker, tensor ring and PEPS. As mentioned previously,
+for the case of the CP decomposition, the graph G of the TN structure is in fact a hyper-graph with
+|V | = p nodes and NG = pdr parameters for a weight tensor in (Rd)⌦p with CP rank at most
+r. Several TN learning models using these decomposition models have been proposed previously,
+including [26, 50] for regression in the Tucker format, [ 12] for classiﬁcation using the PEPS model,
+[37, 7] for classiﬁcation with the CP decomposition and [ 62, 72] for tensor completion with TR.
+4 Pseudo-dimension and Generalization Bounds for Tensor Network Models
+In this section, we give a general upper bound on the VC-dimension and pseudo-dimension of hypoth-
+esis classes parameterized by arbitrary TN structures for regression, classiﬁcation and completion.
+We then discuss corollaries of this general upper bound for common TN models including low-rank
+matrices and TT tensors, and compare them with existing results. Examples of particular upper
+bounds that can be derived from our general result can be found in Table 1.
+4.1 Upper Bounds on the VC-dimension, Pseudo-dimension and Generalization Gap
+The following theorem states one of our main results which upper bounds the VC and pseudo-
+dimension of models parameterized by arbitrary TN structures.
+Theorem 2. Let G =( V, E, dim) be a tensor network structure and let HregressionG , HclassifG , HcompletionG
+be the corresponding hypothesis classes deﬁned in Equations ( 4-6), where each model has NG
+parameters (see Equation (3)).
+Then, Pdim(HregressionG ), dVC(HclassifG ) and Pdim(HcompletionG ) are all upper bounded by
+2NG log(12|V |).
+6
+
+=== PDF 7 ===
+These bounds naturally relate the capacity of the TN classes HregressionG , HclassifG , HcompletionG to the
+number of parameters NG of the underlying TN structure G. Following the analysis of [ 54] for
+matrix completion and its extension to the Tucker decomposition model presented in [ 41], the proof
+of this theorem leverages Warren’s theorem which bounds the number of sign patterns a system of
+polynomial equations can take.
+Theorem 3 ([66]). The number of sign patterns of n real polynomials, each of degree at most v, over
+N variables is at most
+  4evn
+N
+ N
+for all n>N > 2 (where e is Euler’s number).
+The proof of Theorem 2 fundamentally relies on Warren’s theorem to bound the number of sign
+patterns that can be achieved by hypotheses in HregressionG on a set of n input examples X 1, ··· , X n.
+Indeed, the set of predictions yi = h(X i) for i 2 [n] realizable by hypotheses h 2H regressionG can be
+seen as a set of n polynomials of degree |V | over NG variables. The variables of the polynomials
+are the entries of the core tensors {T v }v2V . The upper bound on the number of sign patterns
+obtained from Warren’s theorem can then be leveraged to obtain a bound on the pseudo-dimension
+of the hypothesis class HregressionG , which in turn implies the upper bounds on dVC(HclassifG ) and
+Pdim(HcompletionG ). The complete proof of Theorem 2 can be found in Appendix A.1.1.
+Note that Theorem 2 implies that for a ﬁxed number of parameters NG, the VC-dimension grows
+with the number of vertices in the TN, thus a higher-order tensorization increases the capacity as
+measured by the VC dimension. This supports a common observation that higher-order tensorizations
+of high-dimensional data generally result in a model with better learning capacity.
+The bounds on the VC-dimension and pseudo-dimension presented in Theorem 2 can be leveraged to
+derive bounds on the generalization error of the corresponding learning models; see for example [ 40].
+In the following theorem, we derive such a generalization bound for classiﬁers parameterized by
+arbitrary TN structures.
+Theorem 4. Let S be a sample of size n drawn from a distribution D and let ` be a loss bounded by
+1. Then, for any  > 0, with probability at least 1     over the choice of S, for any h 2H classifG ,
+R(h) < ˆRS (h)+2
+s
+2
+n
+✓
+NG log 8en|V |NG + log 4  ◆. (7)
+The proof of this theorem, which can be found in Appendix A.1.2, relies on a symmetrization lemma
+and a corollary of Hoeffding’s inequality. It follows from this theorem that, with high probability, the
+generalization gap R(h)   ˆRS (h) of any hypothesis h 2H classifG is in O
+✓q
+NG log (n)
+n
+◆
+. This bound
+naturally relates the sample complexity of the hypothesis class with its expressiveness. The notion
+of richness of the hypothesis class appearing in this bound reﬂects the structure of the underlying
+TN through the number of parameters NG. Using classical results (see, e.g., Theorem 10.6 in [ 40]),
+similar generalization bounds for regression and classiﬁcation with arbitrary TN structures can be
+obtained from the bounds on the pseudo-dimension of HregressionG and HcompletionG derived in Theorem 2.
+To examine this upper bound in practice, we perform an experiment with low-rank TT classiﬁers on
+synthetic data which can be found in Appendix B.
+In the next subsection, we present corollaries of our results for particular TN structures, including
+low-rank matrix completion and the TT classiﬁers introduced in [ 56].
+4.2 Special cases
+We now discuss special cases of Theorems 2 and 4 and compare them with existing results.
+Low-rank matrices Let Gmat(r)= d1 r d2 and T (Gmat(r)) be the set of d1 ⇥ d2 matrices
+of rank at most r. In this case, we have |V | =2 and NGmat(r) = r(d1 + d2), and Theorems 2 and 4
+give the following result.
+Corollary 5. Pdim(HregressionGmat (r) ), dVC(HclassifGmat (r)) and Pdim(HcompletionGmat (r) ) are all upper bounded by
+10r(d1 + d2). Moreover , with high probability over the choice of a sample S of size n drawn i.i.d.
+7
+
+=== PDF 8 ===
+from a distribution D, the generalization gap R(h)   ˆRS (h) of any hypothesis h 2H classifGmat (r) is
+in O
+✓q
+r(d1 +d2 )l o g (n)
+n
+◆
+.
+This bound improves on the one given in [ 67] where the VC-dimension of HclassifGmat (r) is bounded by
+r(d1 + d2) log(r(d1 + d2)) (see Theorem 2 in [ 67]). For the matrix completion case, our upper bound
+improves on the bound Pdim(HcompletionGmat (r) )  r(d1 + d2) log 16ed1r derived in [54]. In Section 5, we
+will derive lower bounds showing that the upper bounds on the VC/pseudo-dimension of Corollary 5
+are tight up to the constant factor 10 for matrix completion, regression and classiﬁcation.
+Tensor train Let GTT(r)= d1
+r
+d2
+r ··· r
+dp 1
+r
+dp
+and T (GTT(r)) be the set of tensors
+of TT rank at most r. In this case, we have |V | = p and NG = O
+ 
+dpr2  where d = maxi di. For
+this class of hypotheses, Theorems 2 and 4 give the following result.
+Corollary 6. Pdim(HregressionGTT (r) ), dVC(HclassifGTT (r)) and Pdim(HcompletionGTT (r) ) are all in O  dpr2 log(p) ,
+where d = maxi di. Moreover , with high probability over the choice of a sample S of size n drawn
+i.i.d. from a distribution D, the generalization gap R(h)   ˆRS (h) of any hypothesis h 2H classifGTT (r) is
+in O
+✓q
+dpr2 log(n)
+n
+◆
+.
+This result applies for the MPS model introduced in [ 56] and thus answers the open problem listed
+as Question 13 in [ 13]. To the best of our knowledge, the VC-dimension of tensor train classiﬁer
+models has not been studied previously and our work is the ﬁrst to address this open question. The
+lower bounds we derive in Section 5 show that the upper bounds on the VC/pseudo-dimension of
+Corollary 6 are tight up to a O (log(p)) factor.
+Tucker We brieﬂy compare our result with the ones proved in [ 41] for tensor completion and
+in [ 50] for tensor regression using the Tucker decomposition. For a Tucker decomposition with
+maximum rank r for tensors of size d1 ⇥···⇥ dp with maximal dimension d = maxi di, the number
+of parameters is in O (rp + dpr) and the number of vertices in the TN structure is p +1 . In this
+case, Theorems 2 and 4 show that the VC/pseudo-dimensions are in O ((rp + dpr) log(p)) and the
+generalization gap is in O
+✓q
+(rp +dpr)l o g (n)
+n
+◆
+with high probability for any classifer parameterized
+by a low-rank Tucker tensor. It is worth observing that in contrast with the tensor train decomposition,
+all bounds have an exponential dependency on the tensor order p. In [ 41], the authors give an upper
+bound on the analogue of the growth function for tensor completion problems which is equivalent
+to ours. In [ 50], the pseudo-dimension of regression functions whose weight parameters have low
+Tucker rank is upper-bounded by O
+ 
+(rp + drp) log(pdp 1) , which is looser than our bound due to
+the term dp 1 (though a similar argument to the one we use in the proof of Theorem 4 can be used to
+tighten the bound given in [ 50]).
+Tree tensor networks Lastly, we compare our result with the ones presented in [ 38] where the
+authors study the complexity of learning with tree tensor networks using metric entropy and covering
+numbers. The results presented in [ 38] only hold for TN structures whose underlying graph G is
+a tree. Let G be a tree and ` be a loss function which is both bounded and Lipschitz. Under these
+assumptions, it is shown in [ 38] that, for any h 2H regressionG , with high probability over the choice
+of a sample S of size n drawn i.i.d. from a distribution D, the generalization gap R(h)   ˆR(h) is
+in ˜O(pNG/n). Theorem 4 gives a similar upper bound in ˜O(pNG/n) on the generalization gap
+of low-rank tensor classiﬁers. However, our results hold for any TN structure G. Thus, in contrast
+with our general upper bound (Theorem 2), the bounds from [ 38] cannot be applied to TN structures
+containing cycles such as tensor ring and PEPS.
+5 Lower Bounds
+We now present lower bounds on the VC and pseudo-dimensions of standard TN models: rank-one,
+CP , Tucker, TT and TR.
+8
+
+=== PDF 9 ===
+Table 1: Summary of our results for common TN structures. Both lower and upper bounds hold for the
+VC/pseudo-dimension of HclassifG , HcompletionG and HregressionG for the corresponding TN structure G (see
+Equations (4-6)). The upper bounds follow from applying our general upper bound (Theorem 2)
+to each TN structure. The lower bounds are proved for each TN structure speciﬁcally. Each lower
+bound is followed by the condition under which it holds in parenthesis (small font). Note that the two
+bounds for TT and TR hold for both TN structures.
+rank one CP Tucker TT / TR
+Decomposition d d ··· d d d d ··· d d
+r r r r
+d d ··· d d
+r r r r d
+r
+d
+r ··· r
+d
+r
+d
+/
+d
+r
+d
+r ···r r
+d
+r
+d
+Lower Bound (d   1)p rd (r  dp 1) rp (r  d) r2d (r  db p 12 c,p   3)
+(condition) p(r2 d 1)3 (r = d, p/3 2 N)
+Upper bound 2dp log(12p) 2prd log(12p) 2(rp +prd) log(24p) 2pr2d log(12p)
+Theorem 7. The VC-dimension and pseudo-dimension of the classiﬁcation, regression and comple-
+tion hypothesis classes deﬁned in Equations ( 4-6) for the rank-one, CP , Tucker , TT and TR tensor
+network structures satisfy the lower bounds presented in Table 1.
+These lower bounds show that the general upper bound of Theorem 2 is tight up to a O (log(p))
+factor for rank-one, TT and TR tensors and is tight up to a constant for low-rank matrices.
+The proof of this theorem can be found in Appendix A.2. These lower bounds show that our general
+upper bound is nearly optimal (up to a log factor in p) for rank-one, TT and TR tensors. Indeed, for
+rank-one tensors we have (d   1)p C rank one  2dp log(12p) and for TT and TR tensors of rank
+r = d whose order p is a multiple of 3 we have p(r2d   1)/3 C TT/TRr  pr2d · 2 log(12p), where
+Crank one (resp. CTT/TRr ) denotes any of the VC/pseudo-dimension of the regression, classiﬁcation
+and completion hypothesis classe associated with rank-one tensors (resp. rank r TT and TR tensors).
+In addition, the lower bound for the CP case shows that our general upper bounds are tight up to a
+constant for matrices. Indeed, for p =2 and r  d the bounds for the CP case give rd C matrixr 
+20rd where Cmatrixr denotes the VC/pseudo-dimension of the hypothesis classes associated with
+d ⇥ d matrices of rank at most r.
+6 Conclusion
+We derived a general upper bound on the VC and pseudo-dimension of a large class of tensor models
+parameterized by arbitrary tensor network structures for classiﬁcation, regression and completion.
+We showed that this general bound can be applied to obtain bounds on the complexity of relevant
+machine learning models such as matrix and tensor completion, trace regression and TT-based linear
+classiﬁers. In particular, our result leads to an improved upper bound on the VC-dimension of low-
+rank matrices for completion tasks. As a corollary of our results, we answer the open question listed
+in [13] on the VC-dimension of the MPS classiﬁcation model introduced in [ 56]. To demonstrate the
+tightness of our general upper bound, we derived a series of lower bounds for speciﬁc TN structures,
+notably showing that our bound is tight up to a constant for low-rank matrix models for completion,
+regression and classiﬁcation.
+Future directions include deriving tighter upper bounds and/or lower bounds for the speciﬁc TN
+structures. This includes investigating whether our general upper bound can be tightened by removing
+the log factor in the number of vertices of the TN structure, deriving a stronger lower bound for
+CP (we conjecture our lower bound can be improved by a factor p for CP), and loosening the condition
+under which our stronger lower bound holds for TT and TR (for TR, we conjecture that a lower bound
+of ˜⌦(pr2d) holds for any p   3 and r  dk for some value of k> 1). Studying other complexity
+measures (e.g. Rademacher complexity) and extending recent data-dependant generalization bounds
+for overparameterized deep neural networks, such as the ones used in [ 4, 34], to TN learning models is
+worth pursuing. Finally, building upon the connection between the depth of convolutional arithmetic
+circuits and tensor network structures introduced in [ 14], it is interesting to connect our result on the
+VC-dimension of tensor networks to the expressiveness and generalization ability of neural networks.
+9
+
+=== PDF 10 ===
+Acknowledgements
+We thank Maude Lizaire for feedbacks and the anonymous reviewers for the useful comments. This
+research is supported by the Canadian Institute for Advanced Research (CIFAR AI chair program)
+and the Natural Sciences and Engineering Research Council of Canada (Discovery program, RGPIN-
+2019-05949).
+References
+[1] Evrim Acar, Daniel M Dunlavy, Tamara G Kolda, and Morten Mørup. Scalable tensor factoriza-
+tions for incomplete data. Chemometrics and Intelligent Laboratory Systems , 106(1):41–56,
+2011.
+[2] Sandesh Adhikary, Siddarth Srinivasan, Jacob Miller, Guillaume Rabusseau, and Byron Boots.
+Quantum tensor networks, stochastic processes, and weighted automata. In The 24th Interna-
+tional Conference on Artiﬁcial Intelligence and Statistics , volume 130, 2021.
+[3] Martin Anthony and Peter L Bartlett. Neural network learning: Theoretical foundations .
+cambridge university press, 2009.
+[4] Sanjeev Arora, Rong Ge, Behnam Neyshabur, and Yi Zhang. Stronger generalization bounds
+for deep nets via a compression approach. In International Conference on Machine Learning ,
+pages 254–263. PMLR, 2018.
+[5] Jacob Biamonte and Ville Bergholm. Tensor networks in a nutshell. arXiv preprint
+arXiv:1708.00006, 2017.
+[6] Olivier Bousquet, Stéphane Boucheron, and Gábor Lugosi. Introduction to statistical learning
+theory. In Summer School on Machine Learning , pages 169–207. Springer, 2003.
+[7] Deng Cai, Xiaofei He, Ji-Rong Wen, Jiawei Han, and Wei-Ying Ma. Support tensor machines
+for text categorization. Technical report, 2006.
+[8] Emmanuel J Candès and Benjamin Recht. Exact matrix completion via convex optimization.
+F oundations of Computational mathematics, 9(6):717–772, 2009.
+[9] Emmanuel J Candès and Terence Tao. The power of convex relaxation: Near-optimal matrix
+completion. IEEE Transactions on Information Theory , 56(5):2053–2080, 2010.
+[10] Chuan Chen, Zhe-Bin Wu, Zi-Tai Chen, Zi-Bin Zheng, and Xiong-Jun Zhang. Auto-weighted
+robust low-rank tensor completion via tensor-train. Information Sciences, 567:100–115, 2021.
+[11] Zhongming Chen, Kim Batselier, Johan AK Suykens, and Ngai Wong. Parallelized tensor train
+learning of polynomial classiﬁers. IEEE transactions on neural networks and learning systems ,
+29(10):4621–4632, 2017.
+[12] Song Cheng, Lei Wang, and Pan Zhang. Supervised learning with projected entangled pair
+states. arXiv preprint arXiv:2009.09932, 2020.
+[13] Juan Ignacio Cirac, José Garre-Rubio, and David Pérez-García. Mathematical open problems in
+projected entangled pair states. Revista Matemática Complutense, 32(3):579–599, 2019.
+[14] Nadav Cohen, Or Sharir, and Amnon Shashua. On the expressive power of deep learning: A
+tensor analysis. In Proceedings of the 29th Conference on Learning Theory , volume 49, pages
+698–728, 2016.
+[15] Richard P Feynman. Quantum mechanical computers. F oundations of physics, 16(6):507–531,
+1986.
+[16] Silvia Gandy, Benjamin Recht, and Isao Y amada. Tensor completion and low-n-rank tensor
+recovery via convex optimization. Inverse Problems, 27(2):025010, 2011.
+[17] Ivan Glasser, Ryan Sweke, Nicola Pancotti, Jens Eisert, and J. Ignacio Cirac. Expressive power
+of tensor-network factorizations for probabilistic modeling. In Advances in Neural Information
+Processing Systems, pages 1496–1508, 2019.
+[18] Ivan Glasser, Nicola Pancotti, and J Ignacio Cirac. From probabilistic graphical models to
+generalized tensor networks for supervised learning. IEEE Access, 8:68169–68182, 2020.
+[19] Lars Grasedyck. Hierarchical singular value decomposition of tensors. SIAM Journal on Matrix
+Analysis and Applications, 31(4):2029–2054, 2010.
+10
+
+=== PDF 11 ===
+[20] Lars Grasedyck, Daniel Kressner, and Christine Tobler. A literature survey of low-rank tensor
+approximation techniques. GAMM-Mitteilungen, 36(1):53–78, 2013.
+[21] Lars Grasedyck, Melanie Kluge, and Sebastian Kramer. V ariants of alternating least squares
+tensor completion in the tensor train format. SIAM Journal on Scientiﬁc Computing , 37(5):
+A2424–A2450, 2015.
+[22] David Gross. Recovering low-rank matrices from few coefﬁcients in any basis. IEEE Transac-
+tions on Information Theory , 57(3):1548–1566, 2011.
+[23] Wolfgang Hackbusch and Stefan Kühn. A new scheme for the tensor representation. Journal of
+F ourier analysis and applications, 15(5):706–722, 2009.
+[24] Nima Hamidi and Mohsen Bayati. On low-rank trace regression under general sampling
+distribution. arXiv preprint arXiv:1904.08576, 2019.
+[25] Zhao-Y u Han, Jun Wang, Heng Fan, Lei Wang, and Pan Zhang. Unsupervised generative
+modeling using matrix product states. Physical Review X, 8(3):031012, 2018.
+[26] Zhi He, Jie Hu, and Yiwen Wang. Low-rank tensor learning for classiﬁcation of hyperspectral
+image with limited labeled samples. Signal Processing, 145:12–25, 2018.
+[27] Frank L Hitchcock. The expression of a tensor or a polyadic as a sum of products. Journal of
+Mathematics and Physics, 6(1-4):164–189, 1927.
+[28] Masaaki Imaizumi, Takanori Maehara, and Kohei Hayashi. On tensor train rank minimization :
+Statistical efﬁciency and scalable algorithm. In Advances in Neural Information Processing
+Systems, pages 3930–3939, 2017.
+[29] Pavel Izmailov, Alexander Novikov, and Dmitry Kropotov. Scalable gaussian processes with
+billions of inducing inputs via tensor train decomposition. In International Conference on
+Artiﬁcial Intelligence and Statistics , volume 84, 2018.
+[30] Hachem Kadri, Stéphane Ayache, Riikka Huusari, Alain Rakotomamonjy, and Liva Ralaivola.
+Partial trace regression and low-rank kraus decomposition. In Proceedings of the 37th Interna-
+tional Conference on Machine Learning , volume 119, 2020.
+[31] V alentin Khrulkov, Alexander Novikov, and Ivan V . Oseledets. Expressive power of recurrent
+neural networks. In Proc. of ICLR, 2018.
+[32] Tamara G Kolda and Brett W Bader. Tensor decompositions and applications. SIAM review, 51
+(3):455–500, 2009.
+[33] Vladimir Koltchinskii and Dong Xia. Optimal estimation of low rank density matrices. J. Mach.
+Learn. Res., 16(53):1757–1792, 2015.
+[34] Jingling Li, Y anchao Sun, Jiahao Su, Taiji Suzuki, and Furong Huang. Understanding gen-
+eralization in deep learning via tensor methods. In International Conference on Artiﬁcial
+Intelligence and Statistics, pages 504–515. PMLR, 2020.
+[35] Ji Liu, Przemyslaw Musialski, Peter Wonka, and Jieping Y e. Tensor completion for estimating
+missing values in visual data. In IEEE 12th International Conference on Computer Vision ,
+2009.
+[36] Luo Luo, Y ubo Xie, Zhihua Zhang, and Wu-Jun Li. Support matrix machines. In Proceedings
+of the 32nd International Conference on Machine Learning , volume 37, 2015.
+[37] Konstantinos Makantasis, Anastasios D Doulamis, Nikolaos D Doulamis, and Antonis Nikitakis.
+Tensor-based classiﬁcation models for hyperspectral data analysis. IEEE Transactions on
+Geoscience and Remote Sensing , 56(12):6884–6898, 2018.
+[38] Bertrand Michel and Anthony Nouy. Learning with tree tensor networks: complexity estimates
+and model selection. arXiv preprint arXiv:2007.01165, 2020.
+[39] Jacob Miller, Guillaume Rabusseau, and John Terilla. Tensor networks for probabilistic sequence
+modeling. In The 24th International Conference on Artiﬁcial Intelligence and Statistics , volume
+130, 2021.
+[40] Mehryar Mohri, Afshin Rostamizadeh, and Ameet Talwalkar. F oundations of machine learning.
+MIT press, 2018.
+11
+
+=== PDF 12 ===
+[41] Maximilian Nickel and V olker Tresp. An analysis of tensor models for learning on structured
+data. In Joint European Conference on Machine Learning and Knowledge Discovery in
+Databases, pages 272–287. Springer, 2013.
+[42] Alexander Novikov, Anton Rodomanov, Anton Osokin, and Dmitry P . V etrov. Putting mrfs
+on a tensor train. In Proceedings of the 31th International Conference on Machine Learning ,
+volume 32, 2014.
+[43] Alexander Novikov, Dmitry Podoprikhin, Anton Osokin, and Dmitry P . V etrov. Tensorizing
+neural networks. In Advances in Neural Information Processing Systems 28 , 2015.
+[44] Alexander Novikov, Mikhail Troﬁmov, and Ivan Oseledets. Exponential machines. arXiv
+preprint arXiv:1605.03795, 2016.
+[45] Román Orús. A practical introduction to tensor networks: Matrix product states and projected
+entangled pair states. Annals of Physics, 349:117–158, 2014.
+[46] Ivan V Oseledets. Tensor-train decomposition. SIAM Journal on Scientiﬁc Computing , 33(5):
+2295–2317, 2011.
+[47] Roger Penrose. Applications of negative dimensional tensors. Combinatorial mathematics and
+its applications, 1:221–244, 1971.
+[48] Ho N Phien, Hoang D Tuan, Johann A Bengua, and Minh N Do. Efﬁcient tensor completion:
+Low-rank tensor train. arXiv preprint arXiv:1601.01083, 2016.
+[49] Hamed Pirsiavash, Deva Ramanan, and Charless C. Fowlkes. Bilinear classiﬁers for visual
+recognition. In Advances in Neural Information Processing Systems , 2009.
+[50] Guillaume Rabusseau and Hachem Kadri. Low-rank regression with tensor responses. In
+Advances in Neural Information Processing Systems , 2016.
+[51] Benjamin Recht, Maryam Fazel, and Pablo A Parrilo. Guaranteed minimum-rank solutions of
+linear matrix equations via nuclear norm minimization. SIAM review, 52(3):471–501, 2010.
+[52] Ulrich Schollwöck. The density-matrix renormalization group in the age of matrix product
+states. Annals of physics, 326(1):96–192, 2011.
+[53] Raghavendra Selvan and Erik B Dam. Tensor networks for medical image classiﬁcation. arXiv
+preprint arXiv:2004.10076, 2020.
+[54] Nathan Srebro, Noga Alon, and Tommi S. Jaakkola. Generalization error bounds for collabora-
+tive prediction with low-rank matrices. In Advances in Neural Information Processing Systems ,
+2004.
+[55] E. Miles Stoudenmire. Learning relevant features of data with multi-scale tensor networks.
+Quantum Science and Technology, 3(3):034003, 2018.
+[56] Edwin Miles Stoudenmire and David J. Schwab. Supervised learning with tensor networks. In
+Advances in Neural Information Processing Systems , 2016.
+[57] Ryota Tomioka and Taiji Suzuki. Convex tensor decomposition via structured schatten norm
+regularization. In Advances in Neural Information Processing Systems , 2013.
+[58] Ryota Tomioka, Taiji Suzuki, Kohei Hayashi, and Hisashi Kashima. Statistical performance of
+convex tensor decomposition. In Advances in Neural Information Processing Systems , 2011.
+[59] Ledyard R Tucker. Some mathematical notes on three-mode factor analysis. Psychometrika, 31
+(3):279–311, 1966.
+[60] Frank V erstraete, V alentin Murg, and J Ignacio Cirac. Matrix product states, projected entangled
+pair states, and variational renormalization group methods for quantum spin systems. Advances
+in Physics, 57(2):143–224, 2008.
+[61] Wenqi Wang, V aneet Aggarwal, and Shuchin Aeron. Tensor completion by alternating mini-
+mization under the tensor train (tt) model. arXiv preprint arXiv:1609.05587, 2016.
+[62] Wenqi Wang, V aneet Aggarwal, and Shuchin Aeron. Efﬁcient low rank tensor ring completion.
+In IEEE International Conference on Computer Vision , 2017.
+[63] Wenqi Wang, Yifan Sun, Brian Eriksson, Wenlin Wang, and V aneet Aggarwal. Wide compres-
+sion: Tensor ring nets. In 2018 IEEE Conference on Computer Vision and Pattern Recognition ,
+2018.
+12
+
+=== PDF 13 ===
+[64] Y azhen Wang et al. Asymptotic equivalence of quantum state tomography and noisy matrix
+completion. The Annals of Statistics , 41(5):2462–2504, 2013.
+[65] Y ongkang Wang, Weicheng Zhang, Zhuliang Y u, Zhenghui Gu, Hao Liu, Zhaoquan Cai,
+Congjun Wang, and Shihan Gao. Support vector machine based on low-rank tensor train
+decomposition for big data applications. In 2017 12th IEEE Conference on Industrial Electronics
+and Applications (ICIEA), pages 850–853. IEEE, 2017.
+[66] Hugh E Warren. Lower bounds for approximation by nonlinear manifolds. Transactions of the
+American Mathematical Society, 133(1):167–178, 1968.
+[67] Lior Wolf, Hueihan Jhuang, and Tamir Hazan. Modeling appearances with low-rank SVM. In
+IEEE Computer Society Conference on Computer Vision and Pattern Recognition , 2007.
+[68] Xiaowen Xu, Qiang Wu, Shuo Wang, Ju Liu, Jiande Sun, and Andrzej Cichocki. Whole brain
+fmri pattern analysis based on tensor neural network. IEEE Access, 6:29297–29305, 2018.
+[69] Yinchong Y ang, Denis Krompass, and V olker Tresp. Tensor-train recurrent neural networks for
+video classiﬁcation. In Proceedings of the 34th International Conference on Machine Learning ,
+volume 70, 2017.
+[70] Rose Y u, Max Guangyu Li, and Y an Liu. Tensor regression meets gaussian processes. In
+International Conference on Artiﬁcial Intelligence and Statistics , volume 84, 2018.
+[71] Longhao Y uan, Jianting Cao, Xuyang Zhao, Qiang Wu, and Qibin Zhao. Higher-dimension
+tensor completion via low-rank tensor ring decomposition. In 2018 Asia-Paciﬁc Signal and
+Information Processing Association Annual Summit and Conference (APSIPA ASC) , pages
+1071–1076. IEEE, 2018.
+[72] Longhao Y uan, Chao Li, Danilo Mandic, Jianting Cao, and Qibin Zhao. Tensor ring decomposi-
+tion with rank minimization on latent space: An efﬁcient approach for tensor completion. In
+Proc. of AAAI, volume 33, pages 9151–9158, 2019.
+[73] Qibin Zhao, Guoxu Zhou, Shengli Xie, Liqing Zhang, and Andrzej Cichocki. Tensor ring
+decomposition. arXiv preprint arXiv:1606.05535, 2016.
+13

@@ -1,0 +1,53 @@
+{
+  "artifact": "../tt-rank-theory.md",
+  "artifact_type": "source-grounded targeted theoretical tutorial, not full bilingual reader",
+  "language": "zh-CN",
+  "analysis_scope": "theory only; no hyperparameter search, training or numerical experiments",
+  "source_format": "pdf-text",
+  "sources": {
+    "textbook": {
+      "path": "/Users/across/Desktop/pre-summer-paper/papers/PUF/tensor_textbook.pdf",
+      "title": "Tensor Decompositions for Data Science",
+      "authors": ["Grey Ballard", "Tamara G. Kolda"],
+      "version": "Final Draft: March 25, 2025",
+      "page_system": "one-based PDF pages; printed page = PDF page - 18 in cited material",
+      "access": "local; no upload or redistribution"
+    },
+    "tenax": {
+      "path": "/Users/across/Desktop/PUF/paper_analysis_20261022/source.pdf",
+      "title": "TENAX: Tensor-Train Driven PUF Modeling Under Strict Query Constraints",
+      "page_system": "one-based PDF pages",
+      "access": "user-provided anonymous manuscript; no code/configuration/logs supplied"
+    }
+  },
+  "provenance_rules": {
+    "textbook_result": "Existing definition, algorithm or theorem, with notation normalized",
+    "teaching_proof": "Derivation written for this report; do not attribute it as a verbatim textbook theorem",
+    "paper_fact": "Explicit TENAX model or setting",
+    "conditional_application": "Requires stated extra assumptions; not a claim that conditions hold in the actual experiment"
+  },
+  "claims": [
+    {"section":"2","claim":"Core shapes and endpoint ranks","type":"textbook_result","sources":[{"document":"textbook","pdf_pages":[159,161,162,163],"locator":"Chapter 8 introduction; 8.1.2–8.1.3"}]},
+    {"section":"3.1–3.3","claim":"Minimal exact TT ranks equal consecutive-cut matrix ranks for fixed ordering and nonzero tensor","type":"teaching_proof","sources":[{"document":"textbook","pdf_pages":[162,163,167,168,169,171],"locator":"TT definition; exact TT-SVD and prefix isometries; Theorem 8.7 proof"}],"conditions":["fixed mode ordering","exact representation","nonzero tensor"]},
+    {"section":"3.4","claim":"Architecture bond dimensions can exceed minimal exact ranks","type":"teaching_proof","sources":[{"document":"textbook","pdf_pages":[162,163],"locator":"TT core dimensions"}],"method":"zero-padding construction"},
+    {"section":"4","claim":"Cut-rank dimensional upper bound is not a recommended numerical setting","type":"teaching_proof","sources":[{"document":"textbook","pdf_pages":[162,165,168],"locator":"8.1.2 warning; Remarks 8.1 and 8.4"}]},
+    {"section":"5.1","claim":"Ideal XOR weight is a separable product","type":"paper_fact","sources":[{"document":"tenax","pdf_pages":[3,7],"locator":"Eq. 2 and Eq. 9–12"}]},
+    {"section":"5.2–5.3","claim":"Ideal nonzero four-way outer product has all TT internal ranks one and CP rank one","type":"teaching_proof","sources":[{"document":"tenax","pdf_pages":[3,7],"locator":"Ideal delay product"},{"document":"textbook","pdf_pages":[162,163,167],"locator":"TT representation and exact decomposition"}],"boundary":"Does not imply learned noisy probability model, optimization convergence, or TT-exclusive advantage"},
+    {"section":"5.4","claim":"Sum of L separable terms has cut ranks at most L","type":"conditional_application","sources":[{"document":"textbook","pdf_pages":[162,163],"locator":"TT representation"}],"method":"matrix rank subadditivity after each cut","boundary":"No assertion that TENAX's actual target has a known such L"},
+    {"section":"5.5","claim":"Featurewise linear reparameterization can preserve a rank-one realization","type":"conditional_application","sources":[{"document":"tenax","pdf_pages":[7],"locator":"IV-C linear expansion claim"}],"conditions":["fixed z = B Phi mapping","each physical weight lies in range(B transpose)","affine and constant-coordinate handling must be specified"]},
+    {"section":"6","claim":"Raw core parameter count and scalar output additions","type":"textbook_result_and_paper_fact","sources":[{"document":"textbook","pdf_pages":[159],"locator":"TT storage formula"},{"document":"tenax","pdf_pages":[8],"locator":"Theorem 1 proof"}],"boundary":"Parameter-container count is not intrinsic functional degrees of freedom; examples are arithmetic only"},
+    {"section":"7.1","claim":"SVD truncation optimality and singular-value tail","type":"textbook_result","sources":[{"document":"textbook","pdf_pages":[163,367],"locator":"LLSV definition; Theorem A.26"}]},
+    {"section":"7.2–7.4","claim":"TT-SVD local residuals, orthogonal error addition and tolerance allocation","type":"textbook_result_with_teaching_explanation","sources":[{"document":"textbook","pdf_pages":[164,166,167,170],"locator":"Algorithms 8.1/8.2; Proposition 8.2; Theorems 8.3/8.6"}],"conditions":["known target tensor","algorithm-generated orthogonal factors","exact-arithmetic mathematical identities"]},
+    {"section":"7.5","claim":"Original cut spectral tails give necessary error lower bounds","type":"teaching_proof","sources":[{"document":"textbook","pdf_pages":[171,367],"locator":"rank factorization in Theorem 8.7 proof; Theorem A.26"}]},
+    {"section":"8","claim":"TT-SVD quasi-optimality factor sqrt(q-1)","type":"textbook_result","sources":[{"document":"textbook","pdf_pages":[170,171],"locator":"Theorem 8.7 and proof"}],"visual_cross_checks":["Existing reader crop E119 on PDF p.170","Existing reader crop E117 on PDF p.170","Existing algorithm line crop S1024 on PDF p.167"]},
+    {"section":"9","claim":"Supervised label training is different from known-tensor TT-SVD","type":"conditional_application_boundary","sources":[{"document":"tenax","pdf_pages":[7,9],"locator":"Eq. 8–14 and Section V"},{"document":"textbook","pdf_pages":[167,170],"locator":"Algorithm 8.2 and its guarantees"}]},
+    {"section":"10","claim":"Frobenius weight error bounds inner-product score perturbation","type":"teaching_proof","sources":[{"document":"textbook","pdf_pages":[341],"locator":"Exercise A.5, Cauchy–Schwarz"},{"document":"tenax","pdf_pages":[7],"locator":"Eq. 8–13"}],"conditions":["same input features","same bias in base derivation","other output scales must be accounted for separately"]},
+    {"section":"11","claim":"Margin condition and disagreement-probability bound","type":"teaching_proof","sources":[{"document":"tenax","pdf_pages":[3,7],"locator":"sign-based physical score and regression formulation"}],"boundary":"Not a quoted textbook PUF generalization theorem; requires input/margin assumptions and does not provide a numerical accuracy guarantee"}
+  ],
+  "typora_preferences": {
+    "raw_html_anchors": "omitted at user's prior request",
+    "math_in_tables": "avoided",
+    "transpose_notation": "grouped top symbol",
+    "formula_ids": "not added to reader-facing Markdown; references use source chapters/theorems and report sections"
+  }
+}

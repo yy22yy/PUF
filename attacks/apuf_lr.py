@@ -6,7 +6,7 @@ import numpy as np
 
 from attacks.common import accuracy, load_challenge_responses, load_crps, split_by_response
 from puf.features import ChallengeFeatureTransformer
-from project_config import load_project_config, resolve_project_path
+from pufkit.config import load_project_config, resolve_project_path
 
 
 def sigmoid(values: np.ndarray) -> np.ndarray:
